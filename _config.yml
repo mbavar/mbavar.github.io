@@ -9,7 +9,7 @@ name: Mohammad Bavarian
 description: Software Engineer
 
 # URL of your avatar or profile pic (you could use your GitHub profile pic)
-avatar: https://images.app.goo.gl/4p6rFUH3YSZ6S3A9A
+avatar: 
 
 #
 # Flags below are optional
@@ -18,7 +18,7 @@ avatar: https://images.app.goo.gl/4p6rFUH3YSZ6S3A9A
 # Includes an icon in the footer for each username you enter
 footer-links:
   dribbble:
-  email:
+  email: mobavarian@gmail.com
   facebook:
   flickr:
   github: mbavar
@@ -26,7 +26,7 @@ footer-links:
   linkedin: mbavar
   pinterest:
   rss: # just type anything here for a working RSS icon
-  twitter: jekyllrb
+  twitter: 
   stackoverflow: # your stackoverflow profile, e.g. "users/50476/bart-kiers"
   youtube: # channel/<your_long_string> or user/<user-name>
   googleplus: # anything in your profile username that comes after plus.google.com/
