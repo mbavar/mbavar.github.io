@@ -4,12 +4,13 @@ title: About
 permalink: /about/
 ---
 
-Some information about you!
+I graduated from MIT in 2017.
 
 ### More Information
 
-A place to include any other types of information that you'd like to include about yourself.
+I am interested in distributed systems and machine learning.
 
 ### Contact me
 
-[email@domain.com](mailto:email@domain.com)
+
+[email](mailto:mobavarian@gmail.com)
