@@ -6,15 +6,13 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 
-  <title>Mohammad Bavarian - Mohammad Bavarian personal website</title>
+  <title>Mohammad Bavarian - Mohammad Bavarian</title>
 
   <meta name="author" content="Mohammad Bavarian" />
 
   
-  <meta name="description" content="This is where I will tell my friends way too much about me">
-  
 
-  <link rel="alternate" type="application/rss+xml" title="Mohammad Bavarian - Mohammad Bavarian personal website" href="http://localhost:4000/feed.xml" />
+  <link rel="alternate" type="application/rss+xml" title="Mohammad Bavarian - Mohammad Bavarian" href="http://localhost:4000/feed.xml" />
 
   
 
@@ -60,11 +58,11 @@
   
 
   
-  <meta property="og:title" content="My website" />
+  <meta property="og:title" content="Blog" />
   
 
    
-  <meta property="og:description" content="This is where I will tell my friends way too much about me">
+  <meta property="og:description" content="{% for post in paginator.posts %} {{ post.title }} {% if post.subtitle %} {{ post.subtitle }} {% endif %} Posted on {{ post.date | date: site.date_format }} {% if post.image %} {% endif %} {{ post.excerpt | strip_html | xml_escape | truncatewords: site.excerpt_length }} {% assign excerpt_word_count = post.excerpt |...">
   
 
 
@@ -76,8 +74,6 @@
   
 
   
-  <meta property="og:image" content="http://localhost:4000/img/avatar-icon.png" />
-  
 
 
   <!-- Twitter summary cards -->
@@ -86,15 +82,13 @@
   <meta name="twitter:creator" content="@" />
 
   
-  <meta name="twitter:title" content="My website" />
+  <meta name="twitter:title" content="Blog" />
   
 
   
-  <meta name="twitter:description" content="This is where I will tell my friends way too much about me">
+  <meta name="twitter:description" content="{% for post in paginator.posts %} {{ post.title }} {% if post.subtitle %} {{ post.subtitle }} {% endif %} Posted on {{ post.date | date: site.date_format }} {% if post.image %} {% endif %} {{ post.excerpt | strip_html | xml_escape | truncatewords: site.excerpt_length }} {% assign excerpt_word_count = post.excerpt |...">
   
 
-  
-  <meta name="twitter:image" content="http://localhost:4000/img/avatar-icon.png" />
   
 
   
@@ -122,25 +116,9 @@
     <div class="collapse navbar-collapse" id="main-navbar">
       <ul class="nav navbar-nav navbar-right">
           <li><a href="/aboutme">About Me</a></li>
-          <li class="navlinks-container">
-            <a class="navlinks-parent" href="javascript:void(0)">Resources</a>
-            <div class="navlinks-children">
-              <a href="http://deanattali.com/beautiful-jekyll/">Beautiful Jekyll</a>
-              <a href="http://www.markdowntutorial.com/">Learn markdown</a>
-            </div>
-          </li>
-        
-          <li><a href="http://deanattali.com">Author's home</a></li></ul>
+          <li><a href="https://scholar.google.com/citations?user=uMg7CEAAAAAJ&hl=en&citsig=AMD79orIynty-124dYtG0mc3i5E9IVCpcA">Scholar</a></li></ul>
     </div>
 
-	
-	<div class="avatar-container">
-	  <div class="avatar-img-border">
-	    <a href="http://localhost:4000/">
-	      <img class="avatar-img" src="/img/avatar-icon.png" />
-		</a>
-	  </div>
-	</div>
 	
 
   </div>
@@ -160,12 +138,7 @@
     <div class="row">
       <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
         <div class="page-heading">
-          <h1>My website</h1>
-		  
-		    
-            <hr class="small">
-            <span class="page-subheading">This is where I will tell my friends way too much about me</span>
-			
+          <h1>Blog</h1>
 		  
 		  
 		  
@@ -187,12 +160,12 @@
   
   <article class="post-preview">
     <a href="/2015-02-28-test-markdown/">
-	  <h2 class="post-title">Test markdown</h2>
+	  <h1 class="post-title">Test markdown</h1>
 
 	  
-	  <h3 class="post-subtitle">
+	  <h4 class="post-subtitle">
 	    Each post also has a subtitle
-	  </h3>
+	  </h4>
 	  
     </a>
 
@@ -228,12 +201,12 @@
   
   <article class="post-preview">
     <a href="/2015-02-26-flake-it-till-you-make-it/">
-	  <h2 class="post-title">Flake it till you make it</h2>
+	  <h1 class="post-title">Flake it till you make it</h1>
 
 	  
-	  <h3 class="post-subtitle">
+	  <h4 class="post-subtitle">
 	    Excerpt from Soulshaping by Jeff Brown
-	  </h3>
+	  </h4>
 	  
     </a>
 
@@ -269,12 +242,12 @@
   
   <article class="post-preview">
     <a href="/2015-02-13-hamlet-monologue/">
-	  <h2 class="post-title">To be</h2>
+	  <h1 class="post-title">To be</h1>
 
 	  
-	  <h3 class="post-subtitle">
+	  <h4 class="post-subtitle">
 	    ... or not to be?
-	  </h3>
+	  </h4>
 	  
     </a>
 
@@ -312,7 +285,7 @@
   
   <article class="post-preview">
     <a href="/2015-01-27-dear-diary/">
-	  <h2 class="post-title">Dear diary</h2>
+	  <h1 class="post-title">Dear diary</h1>
 
 	  
     </a>
@@ -338,12 +311,12 @@
   
   <article class="post-preview">
     <a href="/2015-01-19-soccer/">
-	  <h2 class="post-title">Soccer</h2>
+	  <h1 class="post-title">Soccer</h1>
 
 	  
-	  <h3 class="post-subtitle">
+	  <h4 class="post-subtitle">
 	    Best sport ever!
-	  </h3>
+	  </h4>
 	  
     </a>
 
