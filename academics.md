@@ -20,4 +20,4 @@ _Quantum Information Processing (QIP)_, 2016 (Plenary Talk), _Symposium on the T
 * Arturs Backurs and Mohammad Bavarian. On the Sum of L1 Influences. _IEEE Conference on Computational Complexity (CCC)_, 2014.
 * _Undergraduate Thesis_: New Metrics and Cutoff Phenomena in Theory of Optimal Transportation. 
 
-A more comprehensive list is available at [Google Scholar](https://scholar.google.com/citations?user=uMg7CEAAAAAJ) and on [arxiv](https://arxiv.org/search/?searchtype=author&query=Bavarian%2C+M).
+A more comprehensive list is available at [Google Scholar](https://scholar.google.com/citations?user=uMg7CEAAAAAJ) and on [arXiv](https://arxiv.org/search/?searchtype=author&query=Bavarian%2C+M).
