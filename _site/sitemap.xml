@@ -29,7 +29,14 @@
 <lastmod>2015-02-28T00:00:00-08:00</lastmod>
 </url>
 <url>
+<loc>http://localhost:4000/2019-11-10-about-this-blog/</loc>
+<lastmod>2019-11-10T00:00:00-08:00</lastmod>
+</url>
+<url>
 <loc>http://localhost:4000/aboutme/</loc>
+</url>
+<url>
+<loc>http://localhost:4000/academics/</loc>
 </url>
 <url>
 <loc>http://localhost:4000/</loc>
@@ -39,5 +46,9 @@
 </url>
 <url>
 <loc>http://localhost:4000/page2/</loc>
+</url>
+<url>
+<loc>http://localhost:4000/pdf/bavarian_thesis.pdf</loc>
+<lastmod>2019-11-10T18:41:26-08:00</lastmod>
 </url>
 </urlset>
