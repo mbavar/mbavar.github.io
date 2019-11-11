@@ -10,4 +10,5 @@ I graduated from MIT in 2017 with a PhD in Theoretical CS. Since March 2018, I'v
 
 
 
-Feel free to each out to me via [email](mailto:mobavarian@gmail.com).
+
+Feel free to reach out to me via [email](mailto:mobavarian@gmail.com).
