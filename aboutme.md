@@ -8,7 +8,4 @@ I graduated from MIT in 2017 with a PhD in Theoretical CS. Since March 2018, I'v
 
 ### contact
 
-
-
-
 Feel free to reach out to me via [email](mailto:mobavarian@gmail.com).
