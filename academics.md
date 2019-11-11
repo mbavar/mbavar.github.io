@@ -4,9 +4,10 @@ title: Academic work
 subtitle:
 ---
 
-My PhD thesis was focused of theory of computation, specifically implication of quantum computing to Theoretical CS, and more specifically [PCP theorem](https://en.wikipedia.org/wiki/PCP_theorem) and the [Unique Games Conjecture](https://en.wikipedia.org/wiki/Unique_games_conjecture) in the quantum world. My advisor was Prof. [Madhu Sudan](http://madhu.seas.harvard.edu/). 
+My PhD thesis was focused of theory of computation, specifically implication of quantum computing to Theoretical CS, in particular [PCP theorem](https://en.wikipedia.org/wiki/PCP_theorem) and the [Unique Games Conjecture](https://en.wikipedia.org/wiki/Unique_games_conjecture) in the quantum world. My advisor was Prof. [Madhu Sudan](http://madhu.seas.harvard.edu/). 
 
 Here is a selected set of publications.
+
 
 ## Publications
 
