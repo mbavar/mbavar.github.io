@@ -3,18 +3,18 @@
   <channel>
     <title>Home</title>
     <description>Mohammad Bavarian</description>
-    <link></link>
-    <atom:link href="/feed.xml" rel="self" type="application/rss+xml" />
+    <link>http://localhost:4000/</link>
+    <atom:link href="http://localhost:4000/feed.xml" rel="self" type="application/rss+xml" />
     
       <item>
         <title>Open Source as Business</title>
         <description>
           
-          Since the start of my work in tech, I’ve been fascinated with both technological and business aspects of it. A big open problem in the latter for me has been about the open source businesses. I love the concept. The sense of community and working together with a world-wide team...
+          Since the start of my work in tech, I’ve been fascinated with both the technological and the business aspects of it. A big open problem in the latter for me has been about the open source businesses. I love the concept. The sense of community and working together with a...
         </description>
         <pubDate>Sun, 08 Dec 2019 00:00:00 -0800</pubDate>
-        <link>/2019-12-08-open-source/</link>
-        <guid isPermaLink="true">/2019-12-08-open-source/</guid>
+        <link>http://localhost:4000/2019-12-08-open-source/</link>
+        <guid isPermaLink="true">http://localhost:4000/2019-12-08-open-source/</guid>
       </item>
     
       <item>
@@ -25,8 +25,8 @@
 
         </description>
         <pubDate>Sun, 10 Nov 2019 00:00:00 -0800</pubDate>
-        <link>/2019-11-10-first-post/</link>
-        <guid isPermaLink="true">/2019-11-10-first-post/</guid>
+        <link>http://localhost:4000/2019-11-10-first-post/</link>
+        <guid isPermaLink="true">http://localhost:4000/2019-11-10-first-post/</guid>
       </item>
     
   </channel>
