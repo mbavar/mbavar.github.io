@@ -1,6 +1,7 @@
 ---
 layout: post
 title: Open Source as Business
+show-avatar: false
 tags: [open source, podcasts]
 ---
 
