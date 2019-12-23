@@ -24,7 +24,7 @@ Furthermore, think of running and supporting all that code written by someone el
 **Ans**: This is subtle and actually happens often. But... any good market will inevitably draw competition. That being said, a lot of the time the original team has a lot of advantages over the new entrants. Beside the first mover advantage, you may also have the founding team and core contributors in the project in your team. This is a **massive** advantage. They are the ones that control what gets merged in the main OSS repo, i.e. they approve pull requests and overall product roadmap. They have the best insight into the existing codebase and can see difficulties and weed out hopeless or dumb features far in advance. The competitor can do what it wants with its fork but if the community is engaged and obsessed with your version of the project, they would have a hard time keeping up.   
 Another advantage of having the founders of the OSS in your company is in *sales*. Think of the customer. Would they prefer to go with the company which boasts the services of the original founders of the project who have been at it for years or some new entrant who's trying to hustle its way only after it started to smell the money? For most people, the answer is the former! 
 
-<!--
+i<!--
 Of course everything is not going to be easy. The new entrants might have existing relationships with customers from their other products, and overall better distribution, or even bundling offers or just a lot more money than you. But the above should convince you that the founders of OSS still have a lot of ammunation once things start getting heated. 
 -->
 

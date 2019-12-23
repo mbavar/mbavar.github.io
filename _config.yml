@@ -146,7 +146,7 @@ staticman:
 
 # Excerpt Word Length
 # Truncates the excerpt to the specified number of words on the index page
-excerpt_length: 50
+excerpt_length: 25 
 
 # Character used to separate site title and description in HTML document title
 # and RSS feed title
@@ -161,6 +161,9 @@ date_format: "%B %-d, %Y"
 timezone: "America/Vancouver"
 markdown: kramdown
 highlighter: rouge
+syntax_highlighter_opts:
+    block:
+        line_numbers: true
 permalink:  blog/:title/
 paginate: 5
 

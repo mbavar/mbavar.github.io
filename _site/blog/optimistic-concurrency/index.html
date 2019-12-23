@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+  <!-- Beautiful Jekyll | MIT license | Copyright Dean Attali 2016 -->
+  <head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+
+  <title>Write Contention and Optimistic Concurrency</title>
+
+  <meta name="author" content="Mohammad Bavarian" />
+
+  
+
+  <link rel="alternate" type="application/rss+xml" title="Home - Mohammad Bavarian" href="http://localhost:4000/feed.xml" />
+
+  
+
+  
+
+  
+<!-- Google Analytics -->
+<script>
+    (function (i, s, o, g, r, a, m) {
+        i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
+            (i[r].q = i[r].q || []).push(arguments)
+        }, i[r].l = 1 * new Date(); a = s.createElement(o),
+            m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
+    })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
+    ga('create', 'UA-154629754-1', 'auto');
+    ga('send', 'pageview');
+</script>
+<!-- End Google Analytics -->
+
+
+
+  
+    
+      
+  <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.6.0/css/font-awesome.min.css" />
+
+
+    
+  
+
+  
+    
+      <link rel="stylesheet" href="/css/bootstrap.min.css" />
+    
+      <link rel="stylesheet" href="/css/bootstrap-social.css" />
+    
+      <link rel="stylesheet" href="/css/main.css" />
+    
+  
+
+  
+    
+      <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic" />
+    
+      <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" />
+    
+  
+
+  
+
+  
+
+  
+
+    <!-- Facebook OpenGraph tags -->
+  
+
+  
+  <meta property="og:title" content="Write Contention and Optimistic Concurrency" />
+  
+
+   
+  <meta property="og:description" content="The goal of concurrent programming is to organize code in a way that multiple threads of execution can do independent work without losing consistency. When a program is organized in this way, the scheduler can allocate the CPU cycles more efficiently by switching to a different thread when the current...">
+  
+
+
+  <meta property="og:type" content="website" />
+
+  
+  <meta property="og:url" content="http://localhost:4000/blog/optimistic-concurrency/" />
+  <link rel="canonical" href="http://localhost:4000/blog/optimistic-concurrency/" />
+  
+
+  
+  <meta property="og:image" content="http://localhost:4000/img/me.jpg" />
+  
+
+
+  <!-- Twitter summary cards -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:site" content="@" />
+  <meta name="twitter:creator" content="@" />
+
+  
+  <meta name="twitter:title" content="Write Contention and Optimistic Concurrency" />
+  
+
+  
+  <meta name="twitter:description" content="The goal of concurrent programming is to organize code in a way that multiple threads of execution can do independent work without losing consistency. When a program is organized in this way, the scheduler can allocate the CPU cycles more efficiently by switching to a different thread when the current...">
+  
+
+  
+  <meta name="twitter:image" content="http://localhost:4000/img/me.jpg" />
+  
+
+  
+
+  
+
+</head>
+
+
+  <body>
+
+    
+
+  
+    <nav class="navbar navbar-default navbar-fixed-top navbar-custom">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#main-navbar">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button><a class="navbar-brand" href="http://localhost:4000/">Home</a></div>
+
+    <div class="collapse navbar-collapse" id="main-navbar">
+      <ul class="nav navbar-nav navbar-right">
+          <li><a href="/aboutme">About Me</a></li>
+          <li><a href="/academics">Academic Work</a></li></ul>
+    </div>
+
+	
+
+  </div>
+</nav>
+
+
+    <!-- TODO this file has become a mess, refactor it -->
+
+
+
+
+
+<header class="header-section ">
+
+<div class="intro-header no-img">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <div class="post-heading">
+          <h1>Write Contention and Optimistic Concurrency</h1>
+		  
+		  
+		  
+		  <span class="post-meta">Posted on December 23, 2019</span>
+		  
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</header>
+
+
+
+
+
+<div class="container">
+  <div class="row">
+    <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+
+      
+
+      <article role="main" class="blog-post">
+        <p>The goal of concurrent programming is to organize code in a way that multiple threads of execution can do independent work without losing consistency. When a program is organized in this way, the scheduler can allocate the CPU cycles more efficiently by switching to a different thread when the current one is stuck on IO or a slow system call. This leads to better use of resources and can significantly boost the throughput and latency of an application. There are quite a few interesting topics around concurrency: the different paradigms (such as Go’s <a href="https://blog.golang.org/share-memory-by-communicating">share memory by communicating</a> vs traditional mutex approach), tuning thread counts, common design patterns, green threads, and more. Today, I want to discuss one such topic: <strong><em>optimistic concurrency</em></strong>.</p>
+
+<p>Let’s start with an example. Suppose we want to implement the following simple key-value store interface. For simplicity, we do not include <code class="highlighter-rouge">Delete</code> and <code class="highlighter-rouge">exists</code> methods, which a full interface should include.</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">type</span><span class="x"> </span><span class="n">KVStore</span><span class="x"> </span><span class="k">interface</span><span class="x"> </span><span class="p">{</span><span class="x">
+	</span><span class="n">Get</span><span class="p">(</span><span class="n">key</span><span class="x"> </span><span class="kt">string</span><span class="p">)</span><span class="x"> </span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="x"> </span><span class="kt">error</span><span class="p">)</span><span class="x">
+	</span><span class="n">Put</span><span class="p">(</span><span class="n">key</span><span class="x"> </span><span class="kt">string</span><span class="p">,</span><span class="x"> </span><span class="n">val</span><span class="x"> </span><span class="p">[]</span><span class="kt">byte</span><span class="p">)</span><span class="x"> </span><span class="kt">error</span><span class="x">
+</span><span class="p">}</span><span class="x">
+</span></code></pre></div></div>
+<p>As this is just the semantics of a HashMap, we can implement it using one. [<a href="#design1-footnote">1</a>]</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">// SimpleKVStore is a simple in-memory implementation of KVStore interface.</span><span class="x">
+</span><span class="k">type</span><span class="x"> </span><span class="n">SimpleKVStore</span><span class="x"> </span><span class="k">struct</span><span class="x"> </span><span class="p">{</span><span class="x">
+	</span><span class="n">sync</span><span class="o">.</span><span class="n">RWMutex</span><span class="x">
+	</span><span class="n">data</span><span class="x"> </span><span class="k">map</span><span class="p">[</span><span class="kt">string</span><span class="p">][]</span><span class="kt">byte</span><span class="x">
+</span><span class="p">}</span><span class="x">
+
+</span><span class="c">// Get returns the byte slice associated with the key if it exists.</span><span class="x">
+</span><span class="k">func</span><span class="x"> </span><span class="p">(</span><span class="n">kvs</span><span class="x"> </span><span class="o">*</span><span class="n">SimpleKVStore</span><span class="p">)</span><span class="x"> </span><span class="n">Get</span><span class="p">(</span><span class="n">key</span><span class="x"> </span><span class="kt">string</span><span class="p">)</span><span class="x"> </span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="x"> </span><span class="kt">error</span><span class="p">)</span><span class="x"> </span><span class="p">{</span><span class="x">
+	</span><span class="n">kvs</span><span class="o">.</span><span class="n">RLock</span><span class="p">()</span><span class="x">
+	</span><span class="k">defer</span><span class="x"> </span><span class="n">kvs</span><span class="o">.</span><span class="n">RUnlock</span><span class="p">()</span><span class="x">
+	</span><span class="n">v</span><span class="p">,</span><span class="x"> </span><span class="n">ok</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="n">kvs</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="x">
+	</span><span class="k">if</span><span class="x"> </span><span class="o">!</span><span class="n">ok</span><span class="x"> </span><span class="p">{</span><span class="x">
+		</span><span class="k">return</span><span class="x"> </span><span class="no">nil</span><span class="p">,</span><span class="x"> </span><span class="n">fmt</span><span class="o">.</span><span class="n">Errorf</span><span class="p">(</span><span class="s">"Invalid key"</span><span class="p">)</span><span class="x">
+	</span><span class="p">}</span><span class="x">
+	</span><span class="n">res</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="x"> </span><span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">))</span><span class="x">
+	</span><span class="nb">copy</span><span class="p">(</span><span class="n">res</span><span class="p">,</span><span class="x"> </span><span class="n">v</span><span class="p">)</span><span class="x">
+	</span><span class="k">return</span><span class="x"> </span><span class="n">res</span><span class="p">,</span><span class="x"> </span><span class="no">nil</span><span class="x">
+</span><span class="p">}</span><span class="x">
+
+</span><span class="c">// Put associates the value given to the key. After Put returns the val </span><span class="x">
+</span><span class="c">// buffer can be modified and reused by the client. </span><span class="x">
+</span><span class="k">func</span><span class="x"> </span><span class="p">(</span><span class="n">kvs</span><span class="x"> </span><span class="o">*</span><span class="n">SimpleKVStore</span><span class="p">)</span><span class="x"> </span><span class="n">Put</span><span class="p">(</span><span class="n">key</span><span class="x"> </span><span class="kt">string</span><span class="p">,</span><span class="x"> </span><span class="n">val</span><span class="x"> </span><span class="p">[]</span><span class="kt">byte</span><span class="p">)</span><span class="x"> </span><span class="kt">error</span><span class="x"> </span><span class="p">{</span><span class="x">
+	</span><span class="k">if</span><span class="x"> </span><span class="n">val</span><span class="x"> </span><span class="o">==</span><span class="x"> </span><span class="no">nil</span><span class="x"> </span><span class="p">{</span><span class="x">
+		</span><span class="k">return</span><span class="x"> </span><span class="n">fmt</span><span class="o">.</span><span class="n">Errorf</span><span class="p">(</span><span class="s">"Nil values are not allowed"</span><span class="p">)</span><span class="x">
+	</span><span class="p">}</span><span class="x">
+	</span><span class="n">res</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="x"> </span><span class="nb">len</span><span class="p">(</span><span class="n">val</span><span class="p">))</span><span class="x">
+	</span><span class="nb">copy</span><span class="p">(</span><span class="n">res</span><span class="p">,</span><span class="x"> </span><span class="n">val</span><span class="p">)</span><span class="x">
+	</span><span class="n">kvs</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span><span class="x">
+	</span><span class="k">defer</span><span class="x"> </span><span class="n">kvs</span><span class="o">.</span><span class="n">Unlock</span><span class="p">()</span><span class="x">
+	</span><span class="n">kvs</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="x"> </span><span class="o">=</span><span class="x"> </span><span class="n">res</span><span class="x">
+	</span><span class="k">return</span><span class="x"> </span><span class="no">nil</span><span class="x">
+</span><span class="p">}</span><span class="x">
+</span></code></pre></div></div>
+<p>This is a natural implementation, but also a pretty bad one. The main positive point about it is that it allows concurrent reads. And it is safe and correct! On the negative, it does not support updates to different keys at the same time. The problem is that this <em>KVStore</em> is too pessimistic and locks down the whole system for every write. It is natural to wonder if there is a solution with better write contention behavior.</p>
+
+<h2 id="sidestepping-the-global-lock-when-you-can">Sidestepping the global lock (when you can)</h2>
+<p>The problem is that golang maps (and most other hash maps) do not support concurrent reads/writes. So it seems rather difficult to get rid of this global lock or reduce contention. We can make progress however by relaxing the problem.</p>
+
+<p>Suppose we know that in our application most writes are to the existing keys. This is natural in many applications. For example, if the key-value store holds some data related to each user, in general we’d expect introduction of new users to be rare compared to the changes to the data of the existing ones. To this end, we consider the following modified interface.</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">type</span><span class="x"> </span><span class="n">KVStore</span><span class="x"> </span><span class="k">interface</span><span class="x"> </span><span class="p">{</span><span class="x">
+	</span><span class="n">Get</span><span class="p">(</span><span class="n">key</span><span class="x"> </span><span class="kt">string</span><span class="p">)</span><span class="x"> </span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="x"> </span><span class="kt">error</span><span class="p">)</span><span class="x">
+	</span><span class="n">Put</span><span class="p">(</span><span class="n">key</span><span class="x"> </span><span class="kt">string</span><span class="p">,</span><span class="x"> </span><span class="n">val</span><span class="x"> </span><span class="p">[]</span><span class="kt">byte</span><span class="p">)</span><span class="x"> </span><span class="kt">error</span><span class="x">
+	</span><span class="n">Update</span><span class="p">(</span><span class="n">key</span><span class="x"> </span><span class="kt">string</span><span class="p">,</span><span class="x"> </span><span class="n">val</span><span class="x"> </span><span class="p">[]</span><span class="kt">byte</span><span class="p">)</span><span class="x"> </span><span class="kt">error</span><span class="x">  
+</span><span class="p">}</span><span class="x">
+</span></code></pre></div></div>
+<p>Here, we have added a new method <code class="highlighter-rouge">Update</code> that can be used to modify the value of an existing key. The hope is that we can reduce the global locking only to <code class="highlighter-rouge">Put</code> and manage <code class="highlighter-rouge">Update</code> and <code class="highlighter-rouge">Get</code> using a read lock. This seems quite paradoxical at first as <code class="highlighter-rouge">Update</code> still mutates some state, but actually… it is possible! The idea is to have a local lock per value and use pointers.</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">// LCKVStore is a relatively low-contention key-value store.</span><span class="x">
+</span><span class="k">type</span><span class="x"> </span><span class="n">LCKVStore</span><span class="x"> </span><span class="k">struct</span><span class="x"> </span><span class="p">{</span><span class="x">
+	</span><span class="n">sync</span><span class="o">.</span><span class="n">RWMutex</span><span class="x">
+	</span><span class="n">kvMap</span><span class="x"> </span><span class="k">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="n">value</span><span class="x">
+</span><span class="p">}</span><span class="x">
+
+</span><span class="c">// value is a value in the LCKVStore.</span><span class="x">
+</span><span class="k">type</span><span class="x"> </span><span class="n">value</span><span class="x"> </span><span class="k">struct</span><span class="x"> </span><span class="p">{</span><span class="x">
+	</span><span class="n">sync</span><span class="o">.</span><span class="n">RWMutex</span><span class="x">
+	</span><span class="n">data</span><span class="x"> </span><span class="p">[]</span><span class="kt">byte</span><span class="x">
+</span><span class="p">}</span><span class="x">
+
+</span><span class="c">// Get returns the byte slice associated with the key if it exists.</span><span class="x">
+</span><span class="k">func</span><span class="x"> </span><span class="p">(</span><span class="n">kvs</span><span class="x"> </span><span class="o">*</span><span class="n">LCKVStore</span><span class="p">)</span><span class="x"> </span><span class="n">Get</span><span class="p">(</span><span class="n">key</span><span class="x"> </span><span class="kt">string</span><span class="p">)</span><span class="x"> </span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="x"> </span><span class="kt">error</span><span class="p">)</span><span class="x"> </span><span class="p">{</span><span class="x">
+	</span><span class="n">kvs</span><span class="o">.</span><span class="n">RLock</span><span class="p">()</span><span class="x">
+	</span><span class="k">defer</span><span class="x"> </span><span class="n">kvs</span><span class="o">.</span><span class="n">RUnlock</span><span class="p">()</span><span class="x">
+	</span><span class="n">val</span><span class="p">,</span><span class="x"> </span><span class="n">ok</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="n">kvs</span><span class="o">.</span><span class="n">kvMap</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="x">
+	</span><span class="k">if</span><span class="x"> </span><span class="o">!</span><span class="n">ok</span><span class="x"> </span><span class="p">{</span><span class="x">
+		</span><span class="k">return</span><span class="x"> </span><span class="no">nil</span><span class="p">,</span><span class="x"> </span><span class="n">fmt</span><span class="o">.</span><span class="n">Errorf</span><span class="p">(</span><span class="s">"Invalid key"</span><span class="p">)</span><span class="x">
+	</span><span class="p">}</span><span class="x">
+	</span><span class="n">val</span><span class="o">.</span><span class="n">RLock</span><span class="p">()</span><span class="x">
+	</span><span class="k">defer</span><span class="x"> </span><span class="n">val</span><span class="o">.</span><span class="n">RUnlock</span><span class="p">()</span><span class="x">
+	</span><span class="n">res</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="x"> </span><span class="nb">len</span><span class="p">(</span><span class="n">val</span><span class="o">.</span><span class="n">data</span><span class="p">))</span><span class="x">
+	</span><span class="nb">copy</span><span class="p">(</span><span class="n">res</span><span class="p">,</span><span class="x"> </span><span class="n">val</span><span class="o">.</span><span class="n">data</span><span class="p">)</span><span class="x">
+	</span><span class="k">return</span><span class="x"> </span><span class="n">res</span><span class="p">,</span><span class="x"> </span><span class="no">nil</span><span class="x">
+</span><span class="p">}</span><span class="x">
+
+</span><span class="c">// Update changes the value associated to an existing key.</span><span class="x">
+</span><span class="k">func</span><span class="x"> </span><span class="p">(</span><span class="n">kvs</span><span class="x"> </span><span class="o">*</span><span class="n">LCKVStore</span><span class="p">)</span><span class="x"> </span><span class="n">Update</span><span class="p">(</span><span class="n">key</span><span class="x"> </span><span class="kt">string</span><span class="p">,</span><span class="x"> </span><span class="n">v</span><span class="x"> </span><span class="p">[]</span><span class="kt">byte</span><span class="p">)</span><span class="x"> </span><span class="kt">error</span><span class="x"> </span><span class="p">{</span><span class="x">
+	</span><span class="n">kvs</span><span class="o">.</span><span class="n">RLock</span><span class="p">()</span><span class="x">
+	</span><span class="k">defer</span><span class="x"> </span><span class="n">kvs</span><span class="o">.</span><span class="n">RUnlock</span><span class="p">()</span><span class="x">
+	</span><span class="n">val</span><span class="p">,</span><span class="x"> </span><span class="n">ok</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="n">kvs</span><span class="o">.</span><span class="n">kvMap</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="x">
+	</span><span class="k">if</span><span class="x"> </span><span class="o">!</span><span class="n">ok</span><span class="x"> </span><span class="p">{</span><span class="x">
+		</span><span class="k">return</span><span class="x"> </span><span class="n">fmt</span><span class="o">.</span><span class="n">Errorf</span><span class="p">(</span><span class="s">"Invalid key"</span><span class="p">)</span><span class="x">
+	</span><span class="p">}</span><span class="x">
+	</span><span class="n">buf</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="x"> </span><span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">))</span><span class="x">
+	</span><span class="nb">copy</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="x"> </span><span class="n">v</span><span class="p">)</span><span class="x">
+	</span><span class="n">val</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span><span class="x">
+	</span><span class="k">defer</span><span class="x"> </span><span class="n">val</span><span class="o">.</span><span class="n">Unlock</span><span class="p">()</span><span class="x">
+	</span><span class="n">val</span><span class="o">.</span><span class="n">data</span><span class="x"> </span><span class="o">=</span><span class="x"> </span><span class="n">buf</span><span class="x">
+	</span><span class="k">return</span><span class="x"> </span><span class="no">nil</span><span class="x">
+</span><span class="p">}</span><span class="x">
+
+</span><span class="c">// Put associates the value given to the key.</span><span class="x">
+</span><span class="k">func</span><span class="x"> </span><span class="p">(</span><span class="n">kvs</span><span class="x"> </span><span class="o">*</span><span class="n">LCKVStore</span><span class="p">)</span><span class="x"> </span><span class="n">Put</span><span class="p">(</span><span class="n">key</span><span class="x"> </span><span class="kt">string</span><span class="p">,</span><span class="x"> </span><span class="n">v</span><span class="x"> </span><span class="p">[]</span><span class="kt">byte</span><span class="p">)</span><span class="x"> </span><span class="kt">error</span><span class="x"> </span><span class="p">{</span><span class="x">
+	</span><span class="n">buf</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="x"> </span><span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">))</span><span class="x">
+	</span><span class="nb">copy</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="x"> </span><span class="n">v</span><span class="p">)</span><span class="x">
+	</span><span class="n">kvs</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span><span class="x">
+	</span><span class="k">defer</span><span class="x"> </span><span class="n">kvs</span><span class="o">.</span><span class="n">Unlock</span><span class="p">()</span><span class="x">
+	</span><span class="n">val</span><span class="p">,</span><span class="x"> </span><span class="n">ok</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="n">kvs</span><span class="o">.</span><span class="n">kvMap</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="x">
+	</span><span class="k">if</span><span class="x"> </span><span class="o">!</span><span class="n">ok</span><span class="x"> </span><span class="p">{</span><span class="x">
+		</span><span class="n">val</span><span class="x"> </span><span class="o">=</span><span class="x"> </span><span class="o">&amp;</span><span class="n">value</span><span class="p">{}</span><span class="x">
+	</span><span class="p">}</span><span class="x">
+	</span><span class="n">val</span><span class="o">.</span><span class="n">data</span><span class="x"> </span><span class="o">=</span><span class="x"> </span><span class="n">buf</span><span class="x">
+	</span><span class="n">kvs</span><span class="o">.</span><span class="n">kvMap</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="x"> </span><span class="o">=</span><span class="x"> </span><span class="n">val</span><span class="x">
+	</span><span class="k">return</span><span class="x"> </span><span class="no">nil</span><span class="x">
+</span><span class="p">}</span><span class="x">
+</span></code></pre></div></div>
+<p>Here, <code class="highlighter-rouge">Get</code> and <code class="highlighter-rouge">Put</code> are basically the same as the previous implementation. What is interesting is what happens in <code class="highlighter-rouge">Update</code>. The main idea is that even though we are modifying the data in <code class="highlighter-rouge">val</code> variable, the <code class="highlighter-rouge">kvMap</code> only has the pointer which is not being modified. Hence, no mutation is happening from the point of view of <code class="highlighter-rouge">kvMap</code>. At the local level, modifications to the same key are synchronized by a local per value lock.</p>
+
+<h2 id="optimistic-concurrency">Optimistic concurrency</h2>
+<p>Consider a further requirement for our application to support <em>read</em>, <em>modify</em>, <em>write</em> operation. This is not possible with out current design, as after we read the value and compute the new value based on it, there is no guarantee that a different client hasn’t changed the value of the same key.</p>
+
+<p>One solution is to incorporate transactions in our system.</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">type</span><span class="x"> </span><span class="n">TransactionID</span><span class="x"> </span><span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span><span class="x">
+
+</span><span class="k">type</span><span class="x"> </span><span class="n">TxKVStore</span><span class="x"> </span><span class="k">interface</span><span class="x"> </span><span class="p">{</span><span class="x">
+	</span><span class="n">BeginCommit</span><span class="p">()</span><span class="x"> </span><span class="p">(</span><span class="n">TransactionID</span><span class="p">,</span><span class="x"> </span><span class="kt">error</span><span class="p">)</span><span class="x">
+	</span><span class="n">EndCommit</span><span class="p">(</span><span class="n">id</span><span class="x"> </span><span class="n">TransactionID</span><span class="p">)</span><span class="x"> </span><span class="kt">error</span><span class="x"> 
+	</span><span class="n">Get</span><span class="p">(</span><span class="n">key</span><span class="x"> </span><span class="kt">string</span><span class="p">,</span><span class="x"> </span><span class="n">id</span><span class="x"> </span><span class="o">*</span><span class="n">TransactionID</span><span class="p">)</span><span class="x"> </span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="x"> </span><span class="kt">error</span><span class="p">)</span><span class="x">
+	</span><span class="n">Put</span><span class="p">(</span><span class="n">key</span><span class="x"> </span><span class="kt">string</span><span class="p">,</span><span class="x"> </span><span class="n">val</span><span class="x"> </span><span class="p">[]</span><span class="kt">byte</span><span class="p">,</span><span class="x"> </span><span class="n">id</span><span class="x"> </span><span class="o">*</span><span class="n">TransactionID</span><span class="p">)</span><span class="x"> </span><span class="kt">error</span><span class="x">
+	</span><span class="n">Update</span><span class="p">(</span><span class="n">key</span><span class="x"> </span><span class="kt">string</span><span class="p">,</span><span class="x"> </span><span class="n">val</span><span class="x"> </span><span class="p">[]</span><span class="kt">byte</span><span class="p">,</span><span class="x"> </span><span class="n">id</span><span class="x"> </span><span class="o">*</span><span class="n">TransactionID</span><span class="p">)</span><span class="x"> </span><span class="kt">error</span><span class="x">
+</span><span class="p">}</span><span class="x">
+</span></code></pre></div></div>
+<p>This is a powerful interface, but not an easy one to implement. In particular, obtaining a global lock (even a read lock) during <code class="highlighter-rouge">BeginCommit</code> without releasing it can be quite dangerous since the client may get delayed or crashes before calling <code class="highlighter-rouge">EndCommit</code>. Here we focus on a simpler solution that avoids the complexity of full commit semantics while still supporting the <em>read</em>, <em>modify</em>, <em>write</em> operation. The idea is to use <em>versioning</em>, which is a main signature of optimistically concurrent systems.</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">type</span><span class="x"> </span><span class="n">Version</span><span class="x"> </span><span class="kt">uint64</span><span class="x">
+
+</span><span class="k">type</span><span class="x"> </span><span class="n">OptimisticKVStore</span><span class="x"> </span><span class="k">interface</span><span class="x"> </span><span class="p">{</span><span class="x">
+	</span><span class="c">// Get returns the byte slice associated with the key if </span><span class="x">
+	</span><span class="c">// it exists and its version.</span><span class="x">
+	</span><span class="n">Get</span><span class="p">(</span><span class="n">key</span><span class="x"> </span><span class="kt">string</span><span class="p">)</span><span class="x"> </span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="x"> </span><span class="n">Version</span><span class="p">,</span><span class="x"> </span><span class="kt">error</span><span class="p">)</span><span class="x">
+	</span><span class="c">// Put associates the value given to the key. </span><span class="x">
+	</span><span class="n">Put</span><span class="p">(</span><span class="n">key</span><span class="x"> </span><span class="kt">string</span><span class="p">,</span><span class="x"> </span><span class="n">val</span><span class="x"> </span><span class="p">[]</span><span class="kt">byte</span><span class="p">)</span><span class="x"> </span><span class="p">(</span><span class="n">Version</span><span class="p">,</span><span class="x"> </span><span class="kt">error</span><span class="p">)</span><span class="x">
+	</span><span class="c">// Update changes the value associated to an existing key. </span><span class="x">
+	</span><span class="c">// If ver is not nil, it ensures the version matches the </span><span class="x">
+	</span><span class="c">// latest one prior to the update. </span><span class="x">
+	</span><span class="n">Update</span><span class="p">(</span><span class="n">key</span><span class="x"> </span><span class="kt">string</span><span class="p">,</span><span class="x"> </span><span class="n">ver</span><span class="x"> </span><span class="o">*</span><span class="n">Version</span><span class="p">)</span><span class="x"> </span><span class="p">(</span><span class="n">Version</span><span class="p">,</span><span class="x"> </span><span class="kt">error</span><span class="p">)</span><span class="x">
+</span><span class="p">}</span><span class="x">
+</span></code></pre></div></div>
+<p>The client can use this interface as follows. [<a href="#retry-footnote">2</a>]</p>
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">func</span><span class="x"> </span><span class="n">RMF</span><span class="p">(</span><span class="n">store</span><span class="x"> </span><span class="n">OptimisticKVStore</span><span class="p">,</span><span class="x"> </span><span class="n">key</span><span class="x"> </span><span class="kt">string</span><span class="p">,</span><span class="x"> </span><span class="n">modify</span><span class="x"> </span><span class="k">func</span><span class="p">([]</span><span class="kt">byte</span><span class="p">)</span><span class="x"> </span><span class="p">[]</span><span class="kt">byte</span><span class="p">)</span><span class="x"> </span><span class="kt">error</span><span class="x"> </span><span class="p">{</span><span class="x">
+	</span><span class="n">data</span><span class="p">,</span><span class="x"> </span><span class="n">ver</span><span class="p">,</span><span class="x"> </span><span class="n">err</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="n">store</span><span class="o">.</span><span class="n">Get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="x">
+	</span><span class="k">if</span><span class="x"> </span><span class="n">err</span><span class="x"> </span><span class="o">!=</span><span class="x"> </span><span class="no">nil</span><span class="x"> </span><span class="p">{</span><span class="x">
+		</span><span class="k">return</span><span class="x"> </span><span class="n">err</span><span class="x">
+	</span><span class="p">}</span><span class="x">
+	</span><span class="n">data</span><span class="x"> </span><span class="o">=</span><span class="x"> </span><span class="n">modify</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="x">
+	</span><span class="n">_</span><span class="p">,</span><span class="x"> </span><span class="n">err</span><span class="x"> </span><span class="o">=</span><span class="x"> </span><span class="n">store</span><span class="o">.</span><span class="n">Update</span><span class="p">(</span><span class="n">key</span><span class="p">,</span><span class="x"> </span><span class="n">data</span><span class="p">,</span><span class="x"> </span><span class="o">&amp;</span><span class="n">ver</span><span class="p">)</span><span class="x">
+	</span><span class="k">return</span><span class="x"> </span><span class="n">err</span><span class="x">
+</span><span class="p">}</span><span class="x">
+</span></code></pre></div></div>
+<p>The implementation is quite similar  to <em>LCKVStore</em> from before. For brevity we only include the <code class="highlighter-rouge">Update</code> method.</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">type</span><span class="x"> </span><span class="n">value</span><span class="x"> </span><span class="k">struct</span><span class="x"> </span><span class="p">{</span><span class="x">
+	</span><span class="n">sync</span><span class="o">.</span><span class="n">RWMutex</span><span class="x">
+	</span><span class="n">data</span><span class="x"> </span><span class="p">[]</span><span class="kt">byte</span><span class="x">
+	</span><span class="n">version</span><span class="x"> </span><span class="kt">uint64</span><span class="x">
+</span><span class="p">}</span><span class="x">
+
+</span><span class="k">func</span><span class="x"> </span><span class="p">(</span><span class="n">kvs</span><span class="x"> </span><span class="o">*</span><span class="x"> </span><span class="n">OptimisticKVStoreImpl</span><span class="p">)</span><span class="x"> </span><span class="n">Update</span><span class="p">(</span><span class="n">key</span><span class="x"> </span><span class="kt">string</span><span class="p">,</span><span class="x"> </span><span class="n">v</span><span class="x"> </span><span class="p">[]</span><span class="kt">byte</span><span class="p">,</span><span class="x"> </span><span class="n">ver</span><span class="x"> </span><span class="o">*</span><span class="n">Version</span><span class="p">)</span><span class="x"> </span><span class="p">(</span><span class="n">Version</span><span class="p">,</span><span class="x"> </span><span class="kt">error</span><span class="p">)</span><span class="x"> </span><span class="p">{</span><span class="x">
+	</span><span class="n">kvs</span><span class="o">.</span><span class="n">RLock</span><span class="p">()</span><span class="x">
+	</span><span class="k">defer</span><span class="x"> </span><span class="n">kvs</span><span class="o">.</span><span class="n">RUnlock</span><span class="p">()</span><span class="x">
+	</span><span class="n">val</span><span class="p">,</span><span class="x"> </span><span class="n">ok</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="n">kvs</span><span class="o">.</span><span class="n">kvMap</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="x">
+	</span><span class="k">if</span><span class="x"> </span><span class="o">!</span><span class="n">ok</span><span class="x"> </span><span class="p">{</span><span class="x">
+		</span><span class="k">return</span><span class="x"> </span><span class="m">0</span><span class="p">,</span><span class="x"> </span><span class="n">fmt</span><span class="o">.</span><span class="n">Errorf</span><span class="p">(</span><span class="s">"Invalid key"</span><span class="p">)</span><span class="x">
+	</span><span class="p">}</span><span class="x">
+	</span><span class="n">val</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span><span class="x">
+	</span><span class="k">defer</span><span class="x"> </span><span class="n">val</span><span class="o">.</span><span class="n">Unlock</span><span class="p">()</span><span class="x">
+	</span><span class="k">if</span><span class="x"> </span><span class="n">ver</span><span class="x"> </span><span class="o">!=</span><span class="x"> </span><span class="no">nil</span><span class="x"> </span><span class="o">&amp;&amp;</span><span class="x"> </span><span class="o">*</span><span class="n">ver</span><span class="x"> </span><span class="o">!=</span><span class="x"> </span><span class="n">val</span><span class="o">.</span><span class="n">version</span><span class="x"> </span><span class="p">{</span><span class="x">
+		</span><span class="k">return</span><span class="x"> </span><span class="m">0</span><span class="p">,</span><span class="x"> </span><span class="n">fmt</span><span class="o">.</span><span class="n">Errorf</span><span class="p">(</span><span class="s">"Stale version"</span><span class="p">)</span><span class="x">
+	</span><span class="p">}</span><span class="x">
+	</span><span class="n">buf</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="x"> </span><span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">))</span><span class="x">
+	</span><span class="nb">copy</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="x"> </span><span class="n">v</span><span class="p">)</span><span class="x">
+	</span><span class="n">val</span><span class="o">.</span><span class="n">data</span><span class="x"> </span><span class="o">=</span><span class="x"> </span><span class="n">buf</span><span class="x">
+	</span><span class="n">val</span><span class="o">.</span><span class="n">version</span><span class="x"> </span><span class="o">+=</span><span class="x"> </span><span class="m">1</span><span class="x">
+	</span><span class="k">return</span><span class="x"> </span><span class="n">val</span><span class="o">.</span><span class="n">version</span><span class="p">,</span><span class="x"> </span><span class="no">nil</span><span class="x">
+</span><span class="p">}</span><span class="x">
+</span></code></pre></div></div>
+<p>Note that in most <em>optimistically concurrent systems</em>, you would likely need to keep a richer history of each item and their versions (at least for the items involved in an ongoing commit) as well as <a href="https://en.wikipedia.org/wiki/Write-ahead_logging">write-ahead-logs</a> for rollbacks. It is not surprising that for more complicated applications, you need many more techniques. Hopefully however, the techniques discussed here, versioning and reducing or eliminating the use of heavy handed global locks, have given you a taste of this intricate and interesting topic.</p>
+
+<h2 id="next-time">Next time</h2>
+<p>In the next post, I’ll discuss the following question: is it possible to go even further in our quest of non-locking and eliminate local locks in <em>OptimisticKVStoreImpl</em> above? This will take us to some of the foundational and low-level topics in concurrency. Stay tuned.</p>
+
+<h3 id="footnotes">Footnotes</h3>
+<p>[<a name="design1-footnote">1</a>]: 
+There are a few simple design decisions beside the concurrency here. First, by disallowing nil values we have the invariant that the values returned from <code class="highlighter-rouge">Get</code> are not nil when there is no error, which is a nice guarantee. We could’ve achieved similar guarantees by using strings, but a more primitive type like byte slice is more appropriate for the generic binary data (such as images) which a KVStore may be storing.</p>
+
+<p>[<a name="retry-footnote">2</a>]:
+This should be called by the client in a retry loop.</p>
+
+
+      </article>
+
+      
+        <div class="blog-tags">
+          Tags:
+          
+          
+            <a href="/tags#concurrency,">concurrency,</a>
+          
+            <a href="/tags#golang">golang</a>
+          
+          
+        </div>
+      
+
+      
+        <!-- Check if any share-links are active -->
+
+
+
+
+
+      
+
+      <ul class="pager blog-pager">
+        
+        <li class="previous">
+          <a href="/blog/open-source/" data-toggle="tooltip" data-placement="top" title="Open Source as Business">&larr; Previous Post</a>
+        </li>
+        
+        
+      </ul>
+
+      
+        <div class="disqus-comments">
+          
+        </div>
+          
+        <div class="staticman-comments">
+          
+
+        </div>
+        <div class="justcomments-comments">
+          
+        </div>
+      
+    </div>
+  </div>
+</div>
+
+
+    <footer>
+  <div class="container beautiful-jekyll-footer">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <ul class="list-inline text-center footer-links"><li><a href="mailto:mobavarian@gmail.com" title="Email me"><span class="fa-stack fa-lg" aria-hidden="true">
+                  <i class="fa fa-circle fa-stack-2x"></i>
+                  <i class="fa fa-envelope fa-stack-1x fa-inverse"></i>
+                </span>
+                <span class="sr-only">Email me</span>
+              </a>
+            </li><li><a href="https://github.com/mbavar" title="GitHub"><span class="fa-stack fa-lg" aria-hidden="true">
+                  <i class="fa fa-circle fa-stack-2x"></i>
+                  <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+                </span>
+                <span class="sr-only">GitHub</span>
+              </a>
+            </li><li><a href="https://linkedin.com/in/mbavar" title="LinkedIn"><span class="fa-stack fa-lg" aria-hidden="true">
+                  <i class="fa fa-circle fa-stack-2x"></i>
+                  <i class="fa fa-linkedin fa-stack-1x fa-inverse"></i>
+                </span>
+                <span class="sr-only">LinkedIn</span>
+              </a>
+            </li></ul>
+      <p class="copyright text-muted">
+      Mohammad Bavarian
+      &nbsp;&bull;&nbsp;
+      2019
+
+      
+
+      
+      </p>
+          <!-- Please don't remove this, keep my open source work credited :) -->
+    <p class="theme-by text-muted">
+      Theme by
+      <a href="https://deanattali.com/beautiful-jekyll/">beautiful-jekyll</a>
+    </p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+  
+    
+
+
+  
+    <!-- doing something a bit funky here because I want to be careful not to include JQuery twice! -->
+    
+      <script>
+      	if (typeof jQuery == 'undefined') {
+          document.write('<script src="/js/jquery-1.11.2.min.js"></scr' + 'ipt>');
+      	}
+      </script>
+    
+  
+    <!-- doing something a bit funky here because I want to be careful not to include JQuery twice! -->
+    
+      <script src="/js/bootstrap.min.js"></script>
+    
+  
+    <!-- doing something a bit funky here because I want to be careful not to include JQuery twice! -->
+    
+      <script src="/js/main.js"></script>
+    
+  
+
+
+
+
+
+
+  
+  </body>
+</html>
