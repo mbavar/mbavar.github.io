@@ -169,7 +169,7 @@ func (kvs *LCKVStore) createOrUpdate(key string, v []byte) error {
 So we have managed to reap the benefits of `Update` without modifying the original interface.
 
 ## Optimistic concurrency
-Consider a further requirement for our application to support *read*, *modify*, *write* operation. This is not possible with the current design, as after we read the value and compute the new one based on it, there is no guarantee that a different client has not meanwhile changed the value of the same key. 
+Consider a further requirement for our application to support *read*, *modify*, *write* operation. This is not possible with the current design, as after we read the value and compute the new one based on it, we don't know that a different client has not changed the value of the same key in the meantime.
 
 One solution is to incorporate transactions in our system.
 
