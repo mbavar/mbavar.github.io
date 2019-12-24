@@ -180,7 +180,7 @@ type TxKVStore interface {
 	Put(key string, val []byte, id *TransactionID) error
 }
 ``` 
-This is a powerful interface, but not an easy one to implement. In particular, obtaining a global lock (even a read lock) during `BeginCommit` without releasing it can be quite dangerous since the client may get delayed or crashes before calling `EndCommit`. Here we focus on a simpler solution that avoids the complexity of full commit semantics while still supporting the *read*, *modify*, *write* operation. The idea is to use *versioning*, which is a main signature of optimistically concurrent systems.
+This is a powerful interface, but not an easy one to implement. In particular, obtaining a global lock (even a read lock) during `BeginCommit`, without releasing, can be quite dangerous since the client may get delayed or crashes before calling `EndCommit`. Here we focus on a simpler solution that avoids the complexity of full commit semantics while still supporting the *read*, *modify*, *write* operation. The idea is to use *versioning*, which is a main signature of optimistically concurrent systems.
 
 ```go
 type Version uint64

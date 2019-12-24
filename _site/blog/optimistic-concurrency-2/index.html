@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+  <!-- Beautiful Jekyll | MIT license | Copyright Dean Attali 2016 -->
+  <head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+
+  <title>Write Contention and Optimistic Concurrency II</title>
+
+  <meta name="author" content="Mohammad Bavarian" />
+
+  
+
+  <link rel="alternate" type="application/rss+xml" title="Home - Mohammad Bavarian" href="http://localhost:4000/feed.xml" />
+
+  
+
+  
+
+  
+<!-- Google Analytics -->
+<script>
+    (function (i, s, o, g, r, a, m) {
+        i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
+            (i[r].q = i[r].q || []).push(arguments)
+        }, i[r].l = 1 * new Date(); a = s.createElement(o),
+            m = s.getElementsByTagName(o)[0]; a.async = 1; a.src = g; m.parentNode.insertBefore(a, m)
+    })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
+    ga('create', 'UA-154629754-1', 'auto');
+    ga('send', 'pageview');
+</script>
+<!-- End Google Analytics -->
+
+
+
+  
+    
+      
+  <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.6.0/css/font-awesome.min.css" />
+
+
+    
+  
+
+  
+    
+      <link rel="stylesheet" href="/css/bootstrap.min.css" />
+    
+      <link rel="stylesheet" href="/css/bootstrap-social.css" />
+    
+      <link rel="stylesheet" href="/css/main.css" />
+    
+  
+
+  
+    
+      <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic" />
+    
+      <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" />
+    
+  
+
+  
+
+  
+
+  
+
+    <!-- Facebook OpenGraph tags -->
+  
+
+  
+  <meta property="og:title" content="Write Contention and Optimistic Concurrency II" />
+  
+
+   
+  <meta property="og:description" content="In the last post, we saw how to reduce global contention in a concurrent key-value store and provide some limited transactional support through versioning. In this post, we show how to use versioning to get rid of local locks. The key here is the compare-and-swap instruction. This is the atomic...">
+  
+
+
+  <meta property="og:type" content="website" />
+
+  
+  <meta property="og:url" content="http://localhost:4000/blog/optimistic-concurrency-2/" />
+  <link rel="canonical" href="http://localhost:4000/blog/optimistic-concurrency-2/" />
+  
+
+  
+  <meta property="og:image" content="http://localhost:4000/img/me.jpg" />
+  
+
+
+  <!-- Twitter summary cards -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:site" content="@" />
+  <meta name="twitter:creator" content="@" />
+
+  
+  <meta name="twitter:title" content="Write Contention and Optimistic Concurrency II" />
+  
+
+  
+  <meta name="twitter:description" content="In the last post, we saw how to reduce global contention in a concurrent key-value store and provide some limited transactional support through versioning. In this post, we show how to use versioning to get rid of local locks. The key here is the compare-and-swap instruction. This is the atomic...">
+  
+
+  
+  <meta name="twitter:image" content="http://localhost:4000/img/me.jpg" />
+  
+
+  
+
+  
+
+</head>
+
+
+  <body>
+
+    
+
+  
+    <nav class="navbar navbar-default navbar-fixed-top navbar-custom">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#main-navbar">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button><a class="navbar-brand" href="http://localhost:4000/">Home</a></div>
+
+    <div class="collapse navbar-collapse" id="main-navbar">
+      <ul class="nav navbar-nav navbar-right">
+          <li><a href="/aboutme">About Me</a></li>
+          <li><a href="/academics">Academic Work</a></li></ul>
+    </div>
+
+	
+
+  </div>
+</nav>
+
+
+    <!-- TODO this file has become a mess, refactor it -->
+
+
+
+
+
+<header class="header-section ">
+
+<div class="intro-header no-img">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <div class="post-heading">
+          <h1>Write Contention and Optimistic Concurrency II</h1>
+		  
+		  
+		  
+		  <span class="post-meta">Posted on December 25, 2019</span>
+		  
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</header>
+
+
+
+
+
+<div class="container">
+  <div class="row">
+    <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+
+      
+
+      <article role="main" class="blog-post">
+        <p>In the last <a href="https://bavarian.dev/blog/optimistic-concurrency/">post</a>, we saw how to reduce global contention in a concurrent key-value store and provide some limited transactional support through versioning. In this post, we show how to use versioning to get rid of local locks. The key here is the <em>compare-and-swap</em> <a href="https://en.wikipedia.org/wiki/Compare-and-swap">instruction</a>. This is the atomic version of the following:</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">func</span><span class="x"> </span><span class="n">CompareAndSwapUint64</span><span class="p">(</span><span class="n">addr</span><span class="x"> </span><span class="o">*</span><span class="kt">int64</span><span class="p">,</span><span class="x"> </span><span class="n">old</span><span class="p">,</span><span class="x"> </span><span class="nb">new</span><span class="x"> </span><span class="kt">int64</span><span class="p">)</span><span class="x"> </span><span class="p">(</span><span class="n">swapped</span><span class="x"> </span><span class="kt">bool</span><span class="p">)</span><span class="x"> </span><span class="p">{</span><span class="x">
+	</span><span class="k">if</span><span class="x"> </span><span class="o">*</span><span class="n">addr</span><span class="x"> </span><span class="o">==</span><span class="x"> </span><span class="n">old</span><span class="x"> </span><span class="p">{</span><span class="x">
+		</span><span class="o">*</span><span class="n">addr</span><span class="x"> </span><span class="o">=</span><span class="x"> </span><span class="nb">new</span><span class="x">
+		</span><span class="k">return</span><span class="x"> </span><span class="no">true</span><span class="x">
+	</span><span class="p">}</span><span class="x">
+	</span><span class="k">return</span><span class="x"> </span><span class="no">false</span><span class="x">
+</span><span class="p">}</span><span class="x">
+</span></code></pre></div></div>
+<p>Atomic <a href="https://golang.org/pkg/sync/atomic/">compare-and-swaps</a> are purely user space and unlike mutexes would never require any help from the operating system. Hence, they can be much cheaper. The tradeoff is that we have to allow <code class="highlighter-rouge">Get</code> or <code class="highlighter-rouge">Put</code> fail sometimes in the case of simultaneous reads/writes, in which case the client needs to retry. This is captured by the <code class="highlighter-rouge">ConflictErr</code> variable below.</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">type</span><span class="x"> </span><span class="n">Version</span><span class="x"> </span><span class="kt">uint64</span><span class="x">
+
+</span><span class="k">var</span><span class="x"> </span><span class="n">ConflictErr</span><span class="x"> </span><span class="o">=</span><span class="x"> </span><span class="n">fmt</span><span class="o">.</span><span class="n">Errorf</span><span class="p">(</span><span class="s">"Conflict detected, retry"</span><span class="p">)</span><span class="x">
+</span><span class="k">var</span><span class="x"> </span><span class="n">StaleVersionErr</span><span class="x"> </span><span class="o">=</span><span class="x"> </span><span class="n">fmt</span><span class="o">.</span><span class="n">Errorf</span><span class="p">(</span><span class="s">"Stale version detected"</span><span class="p">)</span><span class="x">
+
+</span><span class="k">type</span><span class="x"> </span><span class="n">value</span><span class="x"> </span><span class="k">struct</span><span class="x"> </span><span class="p">{</span><span class="x">
+	</span><span class="n">data</span><span class="x">    </span><span class="p">[]</span><span class="kt">byte</span><span class="x">
+	</span><span class="n">version</span><span class="x"> </span><span class="o">*</span><span class="kt">uint64</span><span class="x">
+</span><span class="p">}</span><span class="x">
+
+</span><span class="c">// CSKVStore is a low level key-value store that uses atomic operations </span><span class="x">
+</span><span class="c">// instead of local locks. It still uses a global lock for coordinating </span><span class="x">
+</span><span class="c">// insertion of new keys.</span><span class="x">
+</span><span class="k">type</span><span class="x"> </span><span class="n">CSKVStore</span><span class="x"> </span><span class="k">struct</span><span class="x"> </span><span class="p">{</span><span class="x">
+	</span><span class="n">sync</span><span class="o">.</span><span class="n">RWMutex</span><span class="x">
+	</span><span class="n">kvMap</span><span class="x"> </span><span class="k">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="n">value</span><span class="x">
+</span><span class="p">}</span><span class="x">
+</span></code></pre></div></div>
+<p>This is similar to the versioned <em>LCKVStore</em> from the last <a href="https://bavarian.dev/blog/optimistic-concurrency/">post</a> except now the version appears as a pointer. This is necessary because of the <em>compare-and-swap</em> signature.</p>
+
+<p>Before going into the details, we should mention a few points about our design. First, all access to the actual value of the version is always through atomic operations. Second, we have the following invariant: both <code class="highlighter-rouge">Get</code> and <code class="highlighter-rouge">Put</code> will only return even version values. The odd values are temporary states used internally in the store to indicate the presence of a concurrent write operation and are never exposed to the client.</p>
+
+<figure class="highlight"><pre><code class="language-go" data-lang="go"><table class="rouge-table"><tbody><tr><td class="gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+</pre></td><td class="code"><pre><span class="c">// Get returns the byte slice associated with the key if it exists. </span><span class="x">
+</span><span class="k">func</span><span class="x"> </span><span class="p">(</span><span class="n">kvs</span><span class="x"> </span><span class="o">*</span><span class="n">CSKVStore</span><span class="p">)</span><span class="x"> </span><span class="n">Get</span><span class="p">(</span><span class="n">key</span><span class="x"> </span><span class="kt">string</span><span class="p">)</span><span class="x"> </span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="x"> </span><span class="n">Version</span><span class="p">,</span><span class="x"> </span><span class="kt">error</span><span class="p">)</span><span class="x"> </span><span class="p">{</span><span class="x">
+	</span><span class="n">kvs</span><span class="o">.</span><span class="n">RLock</span><span class="p">()</span><span class="x">
+	</span><span class="k">defer</span><span class="x"> </span><span class="n">kvs</span><span class="o">.</span><span class="n">RUnlock</span><span class="p">()</span><span class="x">
+	</span><span class="n">val</span><span class="p">,</span><span class="x"> </span><span class="n">ok</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="n">kvs</span><span class="o">.</span><span class="n">kvMap</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="x">
+	</span><span class="k">if</span><span class="x"> </span><span class="o">!</span><span class="n">ok</span><span class="x"> </span><span class="p">{</span><span class="x">
+		</span><span class="k">return</span><span class="x"> </span><span class="no">nil</span><span class="p">,</span><span class="x"> </span><span class="m">0</span><span class="p">,</span><span class="x"> </span><span class="n">fmt</span><span class="o">.</span><span class="n">Errorf</span><span class="p">(</span><span class="s">"Invalid key"</span><span class="p">)</span><span class="x">
+	</span><span class="p">}</span><span class="x">
+	</span><span class="n">verp</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="n">val</span><span class="o">.</span><span class="n">version</span><span class="x">
+	</span><span class="n">ver</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="n">atomic</span><span class="o">.</span><span class="n">LoadUint64</span><span class="p">(</span><span class="n">verp</span><span class="p">)</span><span class="x">
+	</span><span class="k">if</span><span class="x"> </span><span class="n">ver</span><span class="x"> </span><span class="o">%</span><span class="x"> </span><span class="m">2</span><span class="x"> </span><span class="o">!=</span><span class="x"> </span><span class="m">0</span><span class="x"> </span><span class="p">{</span><span class="x">
+		</span><span class="k">return</span><span class="x"> </span><span class="no">nil</span><span class="p">,</span><span class="x"> </span><span class="m">0</span><span class="p">,</span><span class="x"> </span><span class="n">ConflictErr</span><span class="x">
+	</span><span class="p">}</span><span class="x">
+	</span><span class="n">res</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="x"> </span><span class="nb">len</span><span class="p">(</span><span class="n">val</span><span class="o">.</span><span class="n">data</span><span class="p">))</span><span class="x">
+	</span><span class="nb">copy</span><span class="p">(</span><span class="n">res</span><span class="p">,</span><span class="x"> </span><span class="n">val</span><span class="o">.</span><span class="n">data</span><span class="p">)</span><span class="x">
+	</span><span class="k">if</span><span class="x"> </span><span class="n">atomic</span><span class="o">.</span><span class="n">CompareAndSwapUint64</span><span class="p">(</span><span class="n">verp</span><span class="p">,</span><span class="x"> </span><span class="n">ver</span><span class="p">,</span><span class="x"> </span><span class="n">ver</span><span class="p">)</span><span class="x"> </span><span class="p">{</span><span class="x">
+		</span><span class="k">return</span><span class="x"> </span><span class="n">res</span><span class="p">,</span><span class="x"> </span><span class="n">Version</span><span class="p">(</span><span class="n">ver</span><span class="p">),</span><span class="x"> </span><span class="no">nil</span><span class="x">
+	</span><span class="p">}</span><span class="x">
+	</span><span class="k">return</span><span class="x"> </span><span class="no">nil</span><span class="p">,</span><span class="x"> </span><span class="m">0</span><span class="p">,</span><span class="x"> </span><span class="n">ConflictErr</span><span class="x">
+</span><span class="p">}</span></pre></td></tr></tbody></table></code></pre></figure>
+
+<p>The main things to note here are lines 10 and 16. These make sure that if there is any write to this key while we are copying data, the read will not go through. To get a more full picture, we should take a look at the <code class="highlighter-rouge">Put</code> implementation.</p>
+
+<figure class="highlight"><pre><code class="language-go" data-lang="go"><table class="rouge-table"><tbody><tr><td class="gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+</pre></td><td class="code"><pre><span class="c">// Put associates the value with the given key. When ver is not </span><span class="x">
+</span><span class="c">// nil, it updates only if the given version matches the current one. </span><span class="x">
+</span><span class="c">// When using non-nil ver, the client must provide a version received </span><span class="x">
+</span><span class="c">// from a previous successful Put or Get. Any other version may </span><span class="x">
+</span><span class="c">// result in an unexpected behavior.</span><span class="x">
+</span><span class="k">func</span><span class="x"> </span><span class="p">(</span><span class="n">kvs</span><span class="x"> </span><span class="o">*</span><span class="n">CSKVStore</span><span class="p">)</span><span class="x"> </span><span class="n">Put</span><span class="p">(</span><span class="n">key</span><span class="x"> </span><span class="kt">string</span><span class="p">,</span><span class="x"> </span><span class="n">ver</span><span class="x"> </span><span class="o">*</span><span class="n">Version</span><span class="p">,</span><span class="x"> </span><span class="n">v</span><span class="x"> </span><span class="p">[]</span><span class="kt">byte</span><span class="p">)</span><span class="x"> </span><span class="p">(</span><span class="n">Version</span><span class="p">,</span><span class="x"> </span><span class="kt">error</span><span class="p">)</span><span class="x"> </span><span class="p">{</span><span class="x">
+	</span><span class="n">kvs</span><span class="o">.</span><span class="n">RLock</span><span class="p">()</span><span class="x">
+	</span><span class="n">val</span><span class="p">,</span><span class="x"> </span><span class="n">ok</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="n">kvs</span><span class="o">.</span><span class="n">kvMap</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="x">
+	</span><span class="k">if</span><span class="x"> </span><span class="o">!</span><span class="n">ok</span><span class="x"> </span><span class="p">{</span><span class="x">
+		</span><span class="n">kvs</span><span class="o">.</span><span class="n">RUnlock</span><span class="p">()</span><span class="x">
+		</span><span class="k">return</span><span class="x"> </span><span class="n">kvs</span><span class="o">.</span><span class="n">createOrUpdate</span><span class="p">(</span><span class="n">key</span><span class="p">,</span><span class="x"> </span><span class="n">v</span><span class="p">)</span><span class="x">
+	</span><span class="p">}</span><span class="x">
+	</span><span class="n">buf</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="x"> </span><span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">))</span><span class="x">
+	</span><span class="nb">copy</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="x"> </span><span class="n">v</span><span class="p">)</span><span class="x">
+	</span><span class="k">var</span><span class="x"> </span><span class="n">expected</span><span class="x"> </span><span class="kt">uint64</span><span class="x">
+	</span><span class="n">verp</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="n">val</span><span class="o">.</span><span class="n">version</span><span class="x">
+	</span><span class="k">if</span><span class="x"> </span><span class="n">ver</span><span class="x"> </span><span class="o">!=</span><span class="x"> </span><span class="no">nil</span><span class="x"> </span><span class="p">{</span><span class="x">
+		</span><span class="n">expected</span><span class="x"> </span><span class="o">=</span><span class="x"> </span><span class="kt">uint64</span><span class="p">(</span><span class="o">*</span><span class="n">ver</span><span class="p">)</span><span class="x">
+	</span><span class="p">}</span><span class="x"> </span><span class="k">else</span><span class="x"> </span><span class="p">{</span><span class="x">
+		</span><span class="n">expected</span><span class="x"> </span><span class="o">=</span><span class="x"> </span><span class="n">atomic</span><span class="o">.</span><span class="n">LoadUint64</span><span class="p">(</span><span class="n">verp</span><span class="p">)</span><span class="x">
+	</span><span class="p">}</span><span class="x">
+	</span><span class="k">if</span><span class="x"> </span><span class="n">expected</span><span class="o">%</span><span class="m">2</span><span class="x"> </span><span class="o">!=</span><span class="x"> </span><span class="m">0</span><span class="x"> </span><span class="p">{</span><span class="x">
+		</span><span class="k">if</span><span class="x"> </span><span class="n">ver</span><span class="x"> </span><span class="o">!=</span><span class="x"> </span><span class="no">nil</span><span class="x"> </span><span class="p">{</span><span class="x">
+			</span><span class="k">return</span><span class="x"> </span><span class="m">0</span><span class="p">,</span><span class="x"> </span><span class="n">fmt</span><span class="o">.</span><span class="n">Errorf</span><span class="p">(</span><span class="s">"Invalid version"</span><span class="p">)</span><span class="x">
+		</span><span class="p">}</span><span class="x">
+		</span><span class="k">return</span><span class="x"> </span><span class="m">0</span><span class="p">,</span><span class="x"> </span><span class="n">ConflictErr</span><span class="x">
+	</span><span class="p">}</span><span class="x">
+	</span><span class="k">if</span><span class="x"> </span><span class="n">atomic</span><span class="o">.</span><span class="n">CompareAndSwapUint64</span><span class="p">(</span><span class="n">verp</span><span class="p">,</span><span class="x"> </span><span class="n">expected</span><span class="p">,</span><span class="x"> </span><span class="n">expected</span><span class="o">+</span><span class="m">1</span><span class="p">)</span><span class="x"> </span><span class="p">{</span><span class="x">
+		</span><span class="n">val</span><span class="o">.</span><span class="n">data</span><span class="x"> </span><span class="o">=</span><span class="x"> </span><span class="n">buf</span><span class="x">
+		</span><span class="n">atomic</span><span class="o">.</span><span class="n">StoreUint64</span><span class="p">(</span><span class="n">verp</span><span class="p">,</span><span class="x"> </span><span class="n">expected</span><span class="o">+</span><span class="m">2</span><span class="p">)</span><span class="x">
+		</span><span class="k">return</span><span class="x"> </span><span class="n">Version</span><span class="p">(</span><span class="n">expected</span><span class="x"> </span><span class="o">+</span><span class="x"> </span><span class="m">2</span><span class="p">),</span><span class="x"> </span><span class="no">nil</span><span class="x">
+	</span><span class="p">}</span><span class="x">
+	</span><span class="k">if</span><span class="x"> </span><span class="n">ver</span><span class="x"> </span><span class="o">!=</span><span class="x"> </span><span class="no">nil</span><span class="x"> </span><span class="p">{</span><span class="x">
+		</span><span class="k">return</span><span class="x"> </span><span class="m">0</span><span class="p">,</span><span class="x"> </span><span class="n">StaleVersionErr</span><span class="x">
+	</span><span class="p">}</span><span class="x">
+	</span><span class="k">return</span><span class="x"> </span><span class="m">0</span><span class="p">,</span><span class="x"> </span><span class="n">ConflictErr</span><span class="x">
+</span><span class="p">}</span><span class="x">
+
+</span><span class="c">// createOrUpdate associates the value to the key. It works whether</span><span class="x">
+</span><span class="c">// the key is existing or not. It acquires an exclusive lock.</span><span class="x">
+</span><span class="k">func</span><span class="x"> </span><span class="p">(</span><span class="n">kvs</span><span class="x"> </span><span class="o">*</span><span class="n">CSKVStore</span><span class="p">)</span><span class="x"> </span><span class="n">createOrUpdate</span><span class="p">(</span><span class="n">key</span><span class="x"> </span><span class="kt">string</span><span class="p">,</span><span class="x"> </span><span class="n">v</span><span class="x"> </span><span class="p">[]</span><span class="kt">byte</span><span class="p">)</span><span class="x"> </span><span class="p">(</span><span class="n">Version</span><span class="p">,</span><span class="x"> </span><span class="kt">error</span><span class="p">)</span><span class="x"> </span><span class="p">{</span><span class="x">
+	</span><span class="n">buf</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="x"> </span><span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">))</span><span class="x">
+	</span><span class="nb">copy</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="x"> </span><span class="n">v</span><span class="p">)</span><span class="x">
+	</span><span class="n">kvs</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span><span class="x">
+	</span><span class="k">defer</span><span class="x"> </span><span class="n">kvs</span><span class="o">.</span><span class="n">Unlock</span><span class="p">()</span><span class="x">
+	</span><span class="n">val</span><span class="p">,</span><span class="x"> </span><span class="n">ok</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="n">kvs</span><span class="o">.</span><span class="n">kvMap</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="x">
+	</span><span class="k">if</span><span class="x"> </span><span class="o">!</span><span class="n">ok</span><span class="x"> </span><span class="p">{</span><span class="x">
+		</span><span class="k">var</span><span class="x"> </span><span class="n">version</span><span class="x"> </span><span class="kt">uint64</span><span class="x">
+		</span><span class="n">val</span><span class="x"> </span><span class="o">=</span><span class="x"> </span><span class="o">&amp;</span><span class="n">value</span><span class="p">{</span><span class="n">version</span><span class="o">:</span><span class="x"> </span><span class="o">&amp;</span><span class="n">version</span><span class="p">}</span><span class="x">
+	</span><span class="p">}</span><span class="x">
+	</span><span class="n">val</span><span class="o">.</span><span class="n">data</span><span class="x"> </span><span class="o">=</span><span class="x"> </span><span class="n">buf</span><span class="x">
+	</span><span class="n">kvs</span><span class="o">.</span><span class="n">kvMap</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="x"> </span><span class="o">=</span><span class="x"> </span><span class="n">val</span><span class="x">
+	</span><span class="k">return</span><span class="x"> </span><span class="n">Version</span><span class="p">(</span><span class="o">*</span><span class="n">val</span><span class="o">.</span><span class="n">version</span><span class="p">),</span><span class="x"> </span><span class="no">nil</span><span class="x">
+</span><span class="p">}</span></pre></td></tr></tbody></table></code></pre></figure>
+
+<p>The above code is somewhat subtle. The key to understanding it is to realize that we are implicitly using the parity of the version as a local lock. A successful write increases the version by 2 (line 30), while an unsuccessful does not change it. In more detail, note that the only times the version is odd are after lines 28 &amp; 29. This is the critical section of the code. For example, suppose some thread A has reached and stopped in the middle of this section. If another thread B computes <code class="highlighter-rouge">expected</code> version (line 18 or 20) and tries to enter the critical section, it will fail either in line 22 or 28, due to either staleness of its version (since it has read the version before A had increased it in line 28) or because of its parity (in case it has read the version after A made it odd in line 28). This ensures the integrity of writes.</p>
+
+<h2 id="tradeoffs">Tradeoffs</h2>
+
+<p>The above low level key-value store highlights another design principle in optimistic concurrency: <strong><em>sacrificing 100% rate success for performance</em></strong>. But what are the cons of this design? Beside complexity, which in this case was due to our reliance on low-level libraries and not inherent to the optimistic design, two other considerations are <em>starvation and fairness</em>.</p>
+
+<p>These issues often do not arise in low-contention settings but can be major problems otherwise. An advantage of lock based designs is that starvation can be mitigated by employing a decent scheduler. However, in optimistic systems the responsibility of retrying in the case of temporary errors falls to the client, and it may not be clear at what frequency the client should retry, or if there is any guarantee from its perspective that it won’t be starved in favor of more aggressive clients. These issues can be addressed partially with more careful designs and the help of rate limiters in real world settings.</p>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>The ideas we have been discussing about optimistic systems are not just theory. They are for example used often in some of the most powerful popular databases such as <a href="https://www.postgresql.org/docs/9.1/mvcc-intro.html">PostgreSQL</a>, <a href="https://dev.mysql.com/doc/refman/8.0/en/innodb-multi-versioning.html">MySQL</a>, <a href="https://www.cockroachlabs.com/docs/stable/architecture/storage-layer.html#mvcc">CockroachDB</a>, etc. Outside the world of databases, these ideas are useful in the internet protocols. In particular, when modifying resources via a REST API, most applications do not consider locking to be a good idea and instead rely on headers such as <code class="highlighter-rouge">if-not-modified-since</code> to achieve transactional behavior in an optimistic way.</p>
+
+<p>Finally, we note that concurrency is a subtle subject. Even the most seasoned professionals sometimes make mistakes using it. Hence, it’s important not to be lured by it when your application does not actually require or benefit much from it. But once these powerful methods become important and you start on the quest of designing your concurrent system, have in mind optimistic design principles. And always do extensive testing.</p>
+
+<p>And that’s it for this series!</p>
+
+      </article>
+
+      
+
+      
+        <!-- Check if any share-links are active -->
+
+
+
+
+
+      
+
+      <ul class="pager blog-pager">
+        
+        <li class="previous">
+          <a href="/blog/optimistic-concurrency/" data-toggle="tooltip" data-placement="top" title="Write Contention and Optimistic Concurrency I">&larr; Previous Post</a>
+        </li>
+        
+        
+      </ul>
+
+      
+        <div class="disqus-comments">
+          
+        </div>
+          
+        <div class="staticman-comments">
+          
+
+        </div>
+        <div class="justcomments-comments">
+          
+        </div>
+      
+    </div>
+  </div>
+</div>
+
+
+    <footer>
+  <div class="container beautiful-jekyll-footer">
+    <div class="row">
+      <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+        <ul class="list-inline text-center footer-links"><li><a href="mailto:mobavarian@gmail.com" title="Email me"><span class="fa-stack fa-lg" aria-hidden="true">
+                  <i class="fa fa-circle fa-stack-2x"></i>
+                  <i class="fa fa-envelope fa-stack-1x fa-inverse"></i>
+                </span>
+                <span class="sr-only">Email me</span>
+              </a>
+            </li><li><a href="https://github.com/mbavar" title="GitHub"><span class="fa-stack fa-lg" aria-hidden="true">
+                  <i class="fa fa-circle fa-stack-2x"></i>
+                  <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+                </span>
+                <span class="sr-only">GitHub</span>
+              </a>
+            </li><li><a href="https://linkedin.com/in/mbavar" title="LinkedIn"><span class="fa-stack fa-lg" aria-hidden="true">
+                  <i class="fa fa-circle fa-stack-2x"></i>
+                  <i class="fa fa-linkedin fa-stack-1x fa-inverse"></i>
+                </span>
+                <span class="sr-only">LinkedIn</span>
+              </a>
+            </li></ul>
+      <p class="copyright text-muted">
+      Mohammad Bavarian
+      &nbsp;&bull;&nbsp;
+      2019
+
+      
+
+      
+      </p>
+          <!-- Please don't remove this, keep my open source work credited :) -->
+    <p class="theme-by text-muted">
+      Theme by
+      <a href="https://deanattali.com/beautiful-jekyll/">beautiful-jekyll</a>
+    </p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+  
+    
+
+
+  
+    <!-- doing something a bit funky here because I want to be careful not to include JQuery twice! -->
+    
+      <script>
+      	if (typeof jQuery == 'undefined') {
+          document.write('<script src="/js/jquery-1.11.2.min.js"></scr' + 'ipt>');
+      	}
+      </script>
+    
+  
+    <!-- doing something a bit funky here because I want to be careful not to include JQuery twice! -->
+    
+      <script src="/js/bootstrap.min.js"></script>
+    
+  
+    <!-- doing something a bit funky here because I want to be careful not to include JQuery twice! -->
+    
+      <script src="/js/main.js"></script>
+    
+  
+
+
+
+
+
+
+  
+  </body>
+</html>

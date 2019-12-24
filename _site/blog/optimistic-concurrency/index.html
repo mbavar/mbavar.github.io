@@ -346,7 +346,7 @@ Suppose we know that in our application most writes are to the existing keys. Th
 	</span><span class="n">Put</span><span class="p">(</span><span class="n">key</span><span class="x"> </span><span class="kt">string</span><span class="p">,</span><span class="x"> </span><span class="n">val</span><span class="x"> </span><span class="p">[]</span><span class="kt">byte</span><span class="p">,</span><span class="x"> </span><span class="n">id</span><span class="x"> </span><span class="o">*</span><span class="n">TransactionID</span><span class="p">)</span><span class="x"> </span><span class="kt">error</span><span class="x">
 </span><span class="p">}</span><span class="x">
 </span></code></pre></div></div>
-<p>This is a powerful interface, but not an easy one to implement. In particular, obtaining a global lock (even a read lock) during <code class="highlighter-rouge">BeginCommit</code> without releasing it can be quite dangerous since the client may get delayed or crashes before calling <code class="highlighter-rouge">EndCommit</code>. Here we focus on a simpler solution that avoids the complexity of full commit semantics while still supporting the <em>read</em>, <em>modify</em>, <em>write</em> operation. The idea is to use <em>versioning</em>, which is a main signature of optimistically concurrent systems.</p>
+<p>This is a powerful interface, but not an easy one to implement. In particular, obtaining a global lock (even a read lock) during <code class="highlighter-rouge">BeginCommit</code>, without releasing, can be quite dangerous since the client may get delayed or crashes before calling <code class="highlighter-rouge">EndCommit</code>. Here we focus on a simpler solution that avoids the complexity of full commit semantics while still supporting the <em>read</em>, <em>modify</em>, <em>write</em> operation. The idea is to use <em>versioning</em>, which is a main signature of optimistically concurrent systems.</p>
 
 <div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">type</span><span class="x"> </span><span class="n">Version</span><span class="x"> </span><span class="kt">uint64</span><span class="x">
 
@@ -442,6 +442,10 @@ This should be called by the client in a retry loop.</p>
           <a href="/blog/open-source/" data-toggle="tooltip" data-placement="top" title="Open Source as Business">&larr; Previous Post</a>
         </li>
         
+        
+        <li class="next">
+          <a href="/blog/optimistic-concurrency-2/" data-toggle="tooltip" data-placement="top" title="Write Contention and Optimistic Concurrency II">Next Post &rarr;</a>
+        </li>
         
       </ul>
 
