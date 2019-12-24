@@ -152,7 +152,7 @@ func (kvs *LCKVStore) Put(key string, v []byte) error {
 
 // createOrUpdate associates the value to the key. It works whether 
 // the key is existing or not. It acquires an exclusive lock.
-func (kvs *LCKVStore) kvs.createOrUpdate(key string, v []byte) error {
+func (kvs *LCKVStore) createOrUpdate(key string, v []byte) error {
     buf := make([]byte, len(v))
 	copy(buf, v)
 	kvs.Lock()
