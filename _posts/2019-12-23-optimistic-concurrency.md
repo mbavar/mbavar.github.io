@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Write Contention and Optimistic Concurrency
+title: Write Contention and Optimistic Concurrency I
 subtitle:
 show-avatar: false
 tags: concurrency, golang
@@ -53,11 +53,10 @@ func (kvs *SimpleKVStore) Put(key string, val []byte) error {
 	return nil
 }
 ```
-This is a natural implementation, but also a pretty bad one. The main positive point about it is that it allows concurrent reads. And it is safe and correct! On the negative, it does not support updates to different keys at the same time. The problem is that this *KVStore* is too pessimistic and locks down the whole system for every write. It is natural to wonder if there is a solution with better write contention behavior.
+This is a natural implementation, but also a pretty bad one. The main positive point about it is that it allows concurrent reads. And it is safe and correct! On the negative, it does not support updates to different keys at the same time. The problem is that this *KVStore* is too pessimistic and locks down the whole system for every write. It is natural to wonder if there is a solution with better write contention.
 
 ## Sidestepping the global lock (when you can)
-The problem is that golang maps (and most other hash maps) do not support concurrent reads/writes. So it seems rather difficult to get rid of this global lock or reduce contention. We can make progress however by relaxing the problem.
-
+The problem is that golang maps (and most other hash maps) do not support concurrent reads/writes. So it seems rather difficult to get rid of this global lock or reduce contention. We can make progress however by relaxing the problem.     
 Suppose we know that in our application most writes are to the existing keys. This is natural in many applications. For example, if the key-value store holds some data related to each user, in general we'd expect introduction of new users to be rare compared to the changes to the data of the existing ones. To this end, we consider the following modified interface.
 
 ```go
@@ -130,8 +129,47 @@ func (kvs *LCKVStore) Put(key string, v []byte) error {
 ```
 Here, `Get` and `Put` are basically the same as the previous implementation. What is interesting is what happens in `Update`. The main idea is that even though we are modifying the data in `val` variable, the `kvMap` only has the pointer which is not being modified. Hence, no mutation is happening from the point of view of `kvMap`. At the local level, modifications to the same key are synchronized by a local per value lock.
 
+Finally, we make another observation. We actually did not need the new `Update` method at all! We can simply detect when a key is non-existing within `Put`. This means the latter call will only acquire exclusive lock in the case of non-existing keys and the client does not have to know if a key is in the *KVStore* in advance.
+```go 
+// This is a better implementation of Put which does not
+// acquire exclusive lock when the key already exists. We 
+// no longer need the Update method.
+func (kvs *LCKVStore) Put(key string, v []byte) error {
+	kvs.RLock()
+	val, ok := kvs.kvMap[key]
+	if !ok {
+		kvs.RUnlock()
+		return kvs.createOrUpdate(key, v)
+	}
+	buf := make([]byte, len(v))
+	copy(buf, v)
+	val.Lock()
+	defer val.Unlock()
+	val.data = buf
+	kvs.RUnlock()
+	return nil
+}
+
+// createOrUpdate associates the value to the key. It works whether 
+// the key is existing or not. It acquires an exclusive lock.
+func (kvs *LCKVStore) kvs.createOrUpdate(key string, v []byte) error {
+    buf := make([]byte, len(v))
+	copy(buf, v)
+	kvs.Lock()
+	defer kvs.Unlock()
+	val, ok := kvs.kvMap[key]
+	if !ok {
+		val = &value{}
+	}
+	val.data = buf
+	kvs.kvMap[key] = val
+	return nil
+}
+```
+So we have managed to reap the benefits of `Update` without modifying the original interface.
+
 ## Optimistic concurrency
-Consider a further requirement for our application to support *read*, *modify*, *write* operation. This is not possible with out current design, as after we read the value and compute the new value based on it, there is no guarantee that a different client hasn't changed the value of the same key. 
+Consider a further requirement for our application to support *read*, *modify*, *write* operation. This is not possible with the current design, as after we read the value and compute the new one based on it, there is no guarantee that a different client has not meanwhile changed the value of the same key. 
 
 One solution is to incorporate transactions in our system.
 
@@ -143,7 +181,6 @@ type TxKVStore interface {
 	EndCommit(id TransactionID) error 
 	Get(key string, id *TransactionID) ([]byte, error)
 	Put(key string, val []byte, id *TransactionID) error
-	Update(key string, val []byte, id *TransactionID) error
 }
 ``` 
 This is a powerful interface, but not an easy one to implement. In particular, obtaining a global lock (even a read lock) during `BeginCommit` without releasing it can be quite dangerous since the client may get delayed or crashes before calling `EndCommit`. Here we focus on a simpler solution that avoids the complexity of full commit semantics while still supporting the *read*, *modify*, *write* operation. The idea is to use *versioning*, which is a main signature of optimistically concurrent systems.
@@ -155,12 +192,10 @@ type OptimisticKVStore interface {
 	// Get returns the byte slice associated with the key if 
 	// it exists and its version.
 	Get(key string) ([]byte, Version, error)
-	// Put associates the value given to the key. 
-	Put(key string, val []byte) (Version, error)
-	// Update changes the value associated to an existing key. 
-	// If ver is not nil, it ensures the version matches the 
-	// latest one prior to the update. 
-	Update(key string, ver *Version) (Version, error)
+	// Put associates the value given to the key. If ver is 
+	// not nil, it ensures the version matches the latest 
+	// one prior to the update. 
+	Put(key string, val []byte, ver *Version) (Version, error)
 }
 ```
 The client can use this interface as follows. [[2](#retry-footnote)]
@@ -171,11 +206,11 @@ func RMF(store OptimisticKVStore, key string, modify func([]byte) []byte) error 
 		return err
 	}
 	data = modify(data)
-	_, err = store.Update(key, data, &ver)
+	_, err = store.Put(key, data, &ver)
 	return err
 }
 ```
-The implementation is quite similar  to *LCKVStore* from before. For brevity we only include the `Update` method.
+The implementation is quite similar  to *LCKVStore* from before. For brevity, we only include the `Put` method.
 
 ```go 
 type value struct {
@@ -184,12 +219,12 @@ type value struct {
 	version uint64
 }
 
-func (kvs * OptimisticKVStoreImpl) Update(key string, v []byte, ver *Version) (Version, error) {
+func (kvs * OptimisticKVStoreImpl) Put(key string, v []byte, ver *Version) (Version, error) {
 	kvs.RLock()
-	defer kvs.RUnlock()
 	val, ok := kvs.kvMap[key]
 	if !ok {
-		return 0, fmt.Errorf("Invalid key")
+		kvs.RUnlock()
+		return kvs.createOrUpdate(key, v, ver)
 	}
 	val.Lock()
 	defer val.Unlock()
@@ -200,6 +235,7 @@ func (kvs * OptimisticKVStoreImpl) Update(key string, v []byte, ver *Version) (V
 	copy(buf, v)
 	val.data = buf
 	val.version += 1
+	kvs.RUnlock()
 	return val.version, nil
 }
 ```
