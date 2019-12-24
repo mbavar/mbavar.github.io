@@ -42,9 +42,6 @@ func (kvs *SimpleKVStore) Get(key string) ([]byte, error) {
 // Put associates the value given to the key. After Put returns the val 
 // buffer can be modified and reused by the client. 
 func (kvs *SimpleKVStore) Put(key string, val []byte) error {
-	if val == nil {
-		return fmt.Errorf("Nil values are not allowed")
-	}
 	res := make([]byte, len(val))
 	copy(res, val)
 	kvs.Lock()
@@ -129,7 +126,7 @@ func (kvs *LCKVStore) Put(key string, v []byte) error {
 ```
 Here, `Get` and `Put` are basically the same as the previous implementation. What is interesting is what happens in `Update`. The main idea is that even though we are modifying the data in `val` variable, the `kvMap` only has the pointer which is not being modified. Hence, no mutation is happening from the point of view of `kvMap`. At the local level, modifications to the same key are synchronized by a local per value lock.
 
-Finally, we make another observation. We actually did not need the new `Update` method at all! We can simply detect when a key is non-existing within `Put`. This means the latter call will only acquire exclusive lock in the case of non-existing keys and the client does not have to know if a key is in the *KVStore* in advance.
+Finally, we make another observation. We actually did not need the new `Update` method at all! We can simply detect when a key is non-existing inside `Put`. With this change, the latter call would no longer need an exclusive lock in the case of existing keys, and the client would not need to know if a key is in the *KVStore* in advance.
 ```go 
 // This is a better implementation of Put which does not
 // acquire exclusive lock when the key already exists. We 
@@ -153,7 +150,7 @@ func (kvs *LCKVStore) Put(key string, v []byte) error {
 // createOrUpdate associates the value to the key. It works whether 
 // the key is existing or not. It acquires an exclusive lock.
 func (kvs *LCKVStore) createOrUpdate(key string, v []byte) error {
-    buf := make([]byte, len(v))
+	buf := make([]byte, len(v))
 	copy(buf, v)
 	kvs.Lock()
 	defer kvs.Unlock()
@@ -246,7 +243,7 @@ In the next post, I'll discuss the following question: is it possible to go even
 
 ### Footnotes
 [<a name="design1-footnote">1</a>]: 
-There are a few simple design decisions beside the concurrency here. First, by disallowing nil values we have the invariant that the values returned from `Get` are not nil when there is no error, which is a nice guarantee. We could've achieved similar guarantees by using strings, but a more primitive type like byte slice is more appropriate for the generic binary data (such as images) which a KVStore may be storing. 
+There are a few simple design decisions beside the concurrency here. In an earlier version of this post, we explicitly checked and disallowed `nil` values given to `Put`. But this distracted from the main considerations of this post which is concurrency. So, for simplicity, here we don't pay attention to this case. Second, we chose byte slices instead of say strings as the underlying value type. The reason for this is that a primitive type such as byte slice is more appropriate for the generic binary data (such as images) which a KVStore may be storing.  
 
 [<a name="retry-footnote">2</a>]:
 This should be called by the client in a retry loop.
