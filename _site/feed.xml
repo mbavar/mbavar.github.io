@@ -7,6 +7,17 @@
     <atom:link href="http://localhost:4000/feed.xml" rel="self" type="application/rss+xml" />
     
       <item>
+        <title>A Puzzle about Filesystems</title>
+        <description>
+          
+          There are many possible explanations for why designing good APIs is hard. Here are three that come to my mind: Developers are bad at sympathy and don’t understand the users. Users are lazy, don’t read the documentations, and misuse the APIs. It’s genuinely hard to balance between abstracting out the...
+        </description>
+        <pubDate>Sun, 02 Feb 2020 00:00:00 -0800</pubDate>
+        <link>http://localhost:4000/blog/file_puzzle/</link>
+        <guid isPermaLink="true">http://localhost:4000/blog/file_puzzle/</guid>
+      </item>
+    
+      <item>
         <title>Write Contention and Optimistic Concurrency II</title>
         <description>
           
