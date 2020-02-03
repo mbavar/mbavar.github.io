@@ -4,8 +4,9 @@ title: Academic work
 subtitle:
 ---
 
-My PhD research was in theory of computation, specifically the implications of quantum computing to Theoretical CS. In my thesis, I presented my work on the [PCP theorem](https://en.wikipedia.org/wiki/PCP_theorem) and the [Unique Games Conjecture](https://en.wikipedia.org/wiki/Unique_games_conjecture) in the quantum setting. My PhD advisor was Prof. [Madhu Sudan](http://madhu.seas.harvard.edu/). 
+I obtained my PhD from MIT [theory of computation](https://toc.csail.mit.edu/) group in CSAIL. Specifically I worked on the implications of quantum computing to Theoretical CS. In my thesis, I presented my work on the [PCP theorem](https://en.wikipedia.org/wiki/PCP_theorem) and the [Unique Games Conjecture](https://en.wikipedia.org/wiki/Unique_games_conjecture) in the quantum setting. My PhD advisor was Prof. [Madhu Sudan](http://madhu.seas.harvard.edu/). 
 
+At the end of my PhD, I become interested in industry and business and now I pursue a career in software engineering.
 
 
 ## Selected Publications

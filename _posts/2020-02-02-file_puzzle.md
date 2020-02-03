@@ -31,7 +31,7 @@ def filesystem_puzzle(filename):
     f = open(filename, "r+")
     print(f.read())
     f.write('of human events, ')
-    os.remove(filename) # remove the file but continue read/write
+    os.remove(filename) # remove the file but continue read & write
     f.write('it becomes necessary...')
     f.seek(0)
     print(f.read())
