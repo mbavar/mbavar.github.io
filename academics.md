@@ -17,7 +17,7 @@ _Quantum Information Processing (QIP)_, 2016 (Plenary Talk), _Symposium on the T
 * Mohammad Bavarian and Peter W. Shor. Information Causality, Szemeredi-Trotter and Algebraic Variants of CHSH. _Innovations in Theoretical Computer Science (ITCS)_, 2015. [[arxiv](https://arxiv.org/pdf/1311.5186.pdf)]
 * Scott Aaronson, Andris Ambainis, Kaspars Balodis, and Mohammad Bavarian. Weak Parity. _International Colloquium on Automata, Languages and Programming (ICALP)_, 2014. [[arxiv](https://arxiv.org/pdf/1312.0036.pdf)]
 * Arturs Backurs and Mohammad Bavarian. On the Sum of L1 Influences. _IEEE Conference on Computational Complexity (CCC)_, 2014. [[arxiv](https://arxiv.org/pdf/1302.4625.pdf)]
-* _PhD Thesis_: Parallel Repetition of Multi-party and Quantum Games via Anchoring and Fortification, 2017. [[link](https://bavarian.dev/pdf/bavarian_thesis.pdf)]
+* _PhD Thesis_: Parallel Repetition of Multi-party and Quantum Games via Anchoring and Fortification, 2017. [[pdf](https://bavarian.dev/pdf/bavarian_thesis.pdf)]
 * _Undergraduate Thesis_: New Metrics and Cutoff Phenomena in Theory of Optimal Transportation, 2011.
 
 A more comprehensive list of my publications is available at [Google Scholar](https://scholar.google.com/citations?user=uMg7CEAAAAAJ) and on [arXiv](https://arxiv.org/search/?searchtype=author&query=Bavarian%2C+M).
