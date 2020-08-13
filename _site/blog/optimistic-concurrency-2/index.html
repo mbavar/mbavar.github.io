@@ -177,37 +177,37 @@
       <article role="main" class="blog-post">
         <p>In the last <a href="https://bavarian.dev/blog/optimistic-concurrency/">post</a>, we saw how to reduce global contention in a concurrent key-value store and provide some limited transactional support through versioning. In this post, we show how to use versioning to get rid of local locks. The key here is the <em>compare-and-swap</em> <a href="https://en.wikipedia.org/wiki/Compare-and-swap">instruction</a>. This is the atomic version of the following:</p>
 
-<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">func</span><span class="x"> </span><span class="n">CompareAndSwapUint64</span><span class="p">(</span><span class="n">addr</span><span class="x"> </span><span class="o">*</span><span class="kt">int64</span><span class="p">,</span><span class="x"> </span><span class="n">old</span><span class="p">,</span><span class="x"> </span><span class="nb">new</span><span class="x"> </span><span class="kt">int64</span><span class="p">)</span><span class="x"> </span><span class="p">(</span><span class="n">swapped</span><span class="x"> </span><span class="kt">bool</span><span class="p">)</span><span class="x"> </span><span class="p">{</span><span class="x">
-	</span><span class="k">if</span><span class="x"> </span><span class="o">*</span><span class="n">addr</span><span class="x"> </span><span class="o">==</span><span class="x"> </span><span class="n">old</span><span class="x"> </span><span class="p">{</span><span class="x">
-		</span><span class="o">*</span><span class="n">addr</span><span class="x"> </span><span class="o">=</span><span class="x"> </span><span class="nb">new</span><span class="x">
-		</span><span class="k">return</span><span class="x"> </span><span class="no">true</span><span class="x">
-	</span><span class="p">}</span><span class="x">
-	</span><span class="k">return</span><span class="x"> </span><span class="no">false</span><span class="x">
-</span><span class="p">}</span><span class="x">
-</span></code></pre></div></div>
-<p>Atomic <a href="https://golang.org/pkg/sync/atomic/">compare-and-swaps</a> are purely user space and unlike mutexes would never require any help from the operating system. Hence, they can be much cheaper. The tradeoff is that we have to allow <code class="highlighter-rouge">Get</code> or <code class="highlighter-rouge">Put</code> fail sometimes in the case of simultaneous reads/writes, in which case the client needs to retry. This is captured by the <code class="highlighter-rouge">ConflictErr</code> variable below.</p>
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">func</span> <span class="n">CompareAndSwapUint64</span><span class="p">(</span><span class="n">addr</span> <span class="o">*</span><span class="kt">int64</span><span class="p">,</span> <span class="n">old</span><span class="p">,</span> <span class="nb">new</span> <span class="kt">int64</span><span class="p">)</span> <span class="p">(</span><span class="n">swapped</span> <span class="kt">bool</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">if</span> <span class="o">*</span><span class="n">addr</span> <span class="o">==</span> <span class="n">old</span> <span class="p">{</span>
+		<span class="o">*</span><span class="n">addr</span> <span class="o">=</span> <span class="nb">new</span>
+		<span class="k">return</span> <span class="no">true</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="no">false</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>Atomic <a href="https://golang.org/pkg/sync/atomic/">compare-and-swaps</a> are purely user space and unlike mutexes would never require any help from the operating system. Hence, they can be much cheaper. The tradeoff is that we have to allow <code class="language-plaintext highlighter-rouge">Get</code> or <code class="language-plaintext highlighter-rouge">Put</code> fail sometimes in the case of simultaneous reads/writes, in which case the client needs to retry. This is captured by the <code class="language-plaintext highlighter-rouge">ConflictErr</code> variable below.</p>
 
-<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">type</span><span class="x"> </span><span class="n">Version</span><span class="x"> </span><span class="kt">uint64</span><span class="x">
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">type</span> <span class="n">Version</span> <span class="kt">uint64</span>
 
-</span><span class="k">var</span><span class="x"> </span><span class="n">ConflictErr</span><span class="x"> </span><span class="o">=</span><span class="x"> </span><span class="n">fmt</span><span class="o">.</span><span class="n">Errorf</span><span class="p">(</span><span class="s">"Conflict detected, retry"</span><span class="p">)</span><span class="x">
-</span><span class="k">var</span><span class="x"> </span><span class="n">StaleVersionErr</span><span class="x"> </span><span class="o">=</span><span class="x"> </span><span class="n">fmt</span><span class="o">.</span><span class="n">Errorf</span><span class="p">(</span><span class="s">"Stale version detected"</span><span class="p">)</span><span class="x">
+<span class="k">var</span> <span class="n">ConflictErr</span> <span class="o">=</span> <span class="n">fmt</span><span class="o">.</span><span class="n">Errorf</span><span class="p">(</span><span class="s">"Conflict detected, retry"</span><span class="p">)</span>
+<span class="k">var</span> <span class="n">StaleVersionErr</span> <span class="o">=</span> <span class="n">fmt</span><span class="o">.</span><span class="n">Errorf</span><span class="p">(</span><span class="s">"Stale version detected"</span><span class="p">)</span>
 
-</span><span class="k">type</span><span class="x"> </span><span class="n">value</span><span class="x"> </span><span class="k">struct</span><span class="x"> </span><span class="p">{</span><span class="x">
-	</span><span class="n">data</span><span class="x">    </span><span class="p">[]</span><span class="kt">byte</span><span class="x">
-	</span><span class="n">version</span><span class="x"> </span><span class="o">*</span><span class="kt">uint64</span><span class="x">
-</span><span class="p">}</span><span class="x">
+<span class="k">type</span> <span class="n">value</span> <span class="k">struct</span> <span class="p">{</span>
+	<span class="n">data</span>    <span class="p">[]</span><span class="kt">byte</span>
+	<span class="n">version</span> <span class="o">*</span><span class="kt">uint64</span>
+<span class="p">}</span>
 
-</span><span class="c">// CSKVStore is a low level key-value store that uses atomic operations </span><span class="x">
-</span><span class="c">// instead of local locks. It still uses a global lock for coordinating </span><span class="x">
-</span><span class="c">// insertion of new keys.</span><span class="x">
-</span><span class="k">type</span><span class="x"> </span><span class="n">CSKVStore</span><span class="x"> </span><span class="k">struct</span><span class="x"> </span><span class="p">{</span><span class="x">
-	</span><span class="n">sync</span><span class="o">.</span><span class="n">RWMutex</span><span class="x">
-	</span><span class="n">kvMap</span><span class="x"> </span><span class="k">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="n">value</span><span class="x">
-</span><span class="p">}</span><span class="x">
-</span></code></pre></div></div>
+<span class="c">// CSKVStore is a low level key-value store that uses atomic operations </span>
+<span class="c">// instead of local locks. It still uses a global lock for coordinating </span>
+<span class="c">// insertion of new keys.</span>
+<span class="k">type</span> <span class="n">CSKVStore</span> <span class="k">struct</span> <span class="p">{</span>
+	<span class="n">sync</span><span class="o">.</span><span class="n">RWMutex</span>
+	<span class="n">kvMap</span> <span class="k">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="o">*</span><span class="n">value</span>
+<span class="p">}</span>
+</code></pre></div></div>
 <p>This is similar to the versioned <em>LCKVStore</em> from the last <a href="https://bavarian.dev/blog/optimistic-concurrency/">post</a> except now the version appears as a pointer. This is necessary because of the <em>compare-and-swap</em> signature.</p>
 
-<p>Before going into the details, we should mention a few points about our design. First, all access to the actual value of the version is always through atomic operations. Second, we have the following invariant: both <code class="highlighter-rouge">Get</code> and <code class="highlighter-rouge">Put</code> will only return even version values. The odd values are temporary states used internally in the store to indicate the presence of a concurrent write operation and are never exposed to the client.</p>
+<p>Before going into the details, we should mention a few points about our design. First, all access to the actual value of the version is always through atomic operations. Second, we have the following invariant: both <code class="language-plaintext highlighter-rouge">Get</code> and <code class="language-plaintext highlighter-rouge">Put</code> will only return even version values. The odd values are temporary states used internally in the store to indicate the presence of a concurrent write operation and are never exposed to the client.</p>
 
 <figure class="highlight"><pre><code class="language-go" data-lang="go"><table class="rouge-table"><tbody><tr><td class="gutter gl"><pre class="lineno">1
 2
@@ -229,28 +229,29 @@
 18
 19
 20
-</pre></td><td class="code"><pre><span class="c">// Get returns the byte slice associated with the key if it exists. </span><span class="x">
-</span><span class="k">func</span><span class="x"> </span><span class="p">(</span><span class="n">kvs</span><span class="x"> </span><span class="o">*</span><span class="n">CSKVStore</span><span class="p">)</span><span class="x"> </span><span class="n">Get</span><span class="p">(</span><span class="n">key</span><span class="x"> </span><span class="kt">string</span><span class="p">)</span><span class="x"> </span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="x"> </span><span class="n">Version</span><span class="p">,</span><span class="x"> </span><span class="kt">error</span><span class="p">)</span><span class="x"> </span><span class="p">{</span><span class="x">
-	</span><span class="n">kvs</span><span class="o">.</span><span class="n">RLock</span><span class="p">()</span><span class="x">
-	</span><span class="k">defer</span><span class="x"> </span><span class="n">kvs</span><span class="o">.</span><span class="n">RUnlock</span><span class="p">()</span><span class="x">
-	</span><span class="n">val</span><span class="p">,</span><span class="x"> </span><span class="n">ok</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="n">kvs</span><span class="o">.</span><span class="n">kvMap</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="x">
-	</span><span class="k">if</span><span class="x"> </span><span class="o">!</span><span class="n">ok</span><span class="x"> </span><span class="p">{</span><span class="x">
-		</span><span class="k">return</span><span class="x"> </span><span class="no">nil</span><span class="p">,</span><span class="x"> </span><span class="m">0</span><span class="p">,</span><span class="x"> </span><span class="n">fmt</span><span class="o">.</span><span class="n">Errorf</span><span class="p">(</span><span class="s">"Invalid key"</span><span class="p">)</span><span class="x">
-	</span><span class="p">}</span><span class="x">
-	</span><span class="n">verp</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="n">val</span><span class="o">.</span><span class="n">version</span><span class="x">
-	</span><span class="n">ver</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="n">atomic</span><span class="o">.</span><span class="n">LoadUint64</span><span class="p">(</span><span class="n">verp</span><span class="p">)</span><span class="x">
-	</span><span class="k">if</span><span class="x"> </span><span class="n">ver</span><span class="x"> </span><span class="o">%</span><span class="x"> </span><span class="m">2</span><span class="x"> </span><span class="o">!=</span><span class="x"> </span><span class="m">0</span><span class="x"> </span><span class="p">{</span><span class="x">
-		</span><span class="k">return</span><span class="x"> </span><span class="no">nil</span><span class="p">,</span><span class="x"> </span><span class="m">0</span><span class="p">,</span><span class="x"> </span><span class="n">ConflictErr</span><span class="x">
-	</span><span class="p">}</span><span class="x">
-	</span><span class="n">res</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="x"> </span><span class="nb">len</span><span class="p">(</span><span class="n">val</span><span class="o">.</span><span class="n">data</span><span class="p">))</span><span class="x">
-	</span><span class="nb">copy</span><span class="p">(</span><span class="n">res</span><span class="p">,</span><span class="x"> </span><span class="n">val</span><span class="o">.</span><span class="n">data</span><span class="p">)</span><span class="x">
-	</span><span class="k">if</span><span class="x"> </span><span class="n">atomic</span><span class="o">.</span><span class="n">CompareAndSwapUint64</span><span class="p">(</span><span class="n">verp</span><span class="p">,</span><span class="x"> </span><span class="n">ver</span><span class="p">,</span><span class="x"> </span><span class="n">ver</span><span class="p">)</span><span class="x"> </span><span class="p">{</span><span class="x">
-		</span><span class="k">return</span><span class="x"> </span><span class="n">res</span><span class="p">,</span><span class="x"> </span><span class="n">Version</span><span class="p">(</span><span class="n">ver</span><span class="p">),</span><span class="x"> </span><span class="no">nil</span><span class="x">
-	</span><span class="p">}</span><span class="x">
-	</span><span class="k">return</span><span class="x"> </span><span class="no">nil</span><span class="p">,</span><span class="x"> </span><span class="m">0</span><span class="p">,</span><span class="x"> </span><span class="n">ConflictErr</span><span class="x">
-</span><span class="p">}</span></pre></td></tr></tbody></table></code></pre></figure>
+</pre></td><td class="code"><pre><span class="c">// Get returns the byte slice associated with the key if it exists. </span>
+<span class="k">func</span> <span class="p">(</span><span class="n">kvs</span> <span class="o">*</span><span class="n">CSKVStore</span><span class="p">)</span> <span class="n">Get</span><span class="p">(</span><span class="n">key</span> <span class="kt">string</span><span class="p">)</span> <span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="n">Version</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="n">kvs</span><span class="o">.</span><span class="n">RLock</span><span class="p">()</span>
+	<span class="k">defer</span> <span class="n">kvs</span><span class="o">.</span><span class="n">RUnlock</span><span class="p">()</span>
+	<span class="n">val</span><span class="p">,</span> <span class="n">ok</span> <span class="o">:=</span> <span class="n">kvs</span><span class="o">.</span><span class="n">kvMap</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+	<span class="k">if</span> <span class="o">!</span><span class="n">ok</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="no">nil</span><span class="p">,</span> <span class="m">0</span><span class="p">,</span> <span class="n">fmt</span><span class="o">.</span><span class="n">Errorf</span><span class="p">(</span><span class="s">"Invalid key"</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="n">verp</span> <span class="o">:=</span> <span class="n">val</span><span class="o">.</span><span class="n">version</span>
+	<span class="n">ver</span> <span class="o">:=</span> <span class="n">atomic</span><span class="o">.</span><span class="n">LoadUint64</span><span class="p">(</span><span class="n">verp</span><span class="p">)</span>
+	<span class="k">if</span> <span class="n">ver</span> <span class="o">%</span> <span class="m">2</span> <span class="o">!=</span> <span class="m">0</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="no">nil</span><span class="p">,</span> <span class="m">0</span><span class="p">,</span> <span class="n">ConflictErr</span>
+	<span class="p">}</span>
+	<span class="n">res</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">val</span><span class="o">.</span><span class="n">data</span><span class="p">))</span>
+	<span class="nb">copy</span><span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="n">val</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+	<span class="k">if</span> <span class="n">atomic</span><span class="o">.</span><span class="n">CompareAndSwapUint64</span><span class="p">(</span><span class="n">verp</span><span class="p">,</span> <span class="n">ver</span><span class="p">,</span> <span class="n">ver</span><span class="p">)</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="n">res</span><span class="p">,</span> <span class="n">Version</span><span class="p">(</span><span class="n">ver</span><span class="p">),</span> <span class="no">nil</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="no">nil</span><span class="p">,</span> <span class="m">0</span><span class="p">,</span> <span class="n">ConflictErr</span>
+<span class="p">}</span>
+</pre></td></tr></tbody></table></code></pre></figure>
 
-<p>The main things to note here are lines 10 and 16. These make sure that if there is any write to this key while we are copying data, the read will not go through. To get a more full picture, we should take a look at the <code class="highlighter-rouge">Put</code> implementation.</p>
+<p>The main things to note here are lines 10 and 16. These make sure that if there is any write to this key while we are copying data, the read will not go through. To get a more full picture, we should take a look at the <code class="language-plaintext highlighter-rouge">Put</code> implementation.</p>
 
 <figure class="highlight"><pre><code class="language-go" data-lang="go"><table class="rouge-table"><tbody><tr><td class="gutter gl"><pre class="lineno">1
 2
@@ -306,62 +307,63 @@
 52
 53
 54
-</pre></td><td class="code"><pre><span class="c">// Put associates the value with the given key. When ver is not </span><span class="x">
-</span><span class="c">// nil, it updates only if the given version matches the current one. </span><span class="x">
-</span><span class="c">// When using non-nil ver, the client must provide a version received </span><span class="x">
-</span><span class="c">// from a previous successful Put or Get. Any other version may </span><span class="x">
-</span><span class="c">// result in an unexpected behavior.</span><span class="x">
-</span><span class="k">func</span><span class="x"> </span><span class="p">(</span><span class="n">kvs</span><span class="x"> </span><span class="o">*</span><span class="n">CSKVStore</span><span class="p">)</span><span class="x"> </span><span class="n">Put</span><span class="p">(</span><span class="n">key</span><span class="x"> </span><span class="kt">string</span><span class="p">,</span><span class="x"> </span><span class="n">ver</span><span class="x"> </span><span class="o">*</span><span class="n">Version</span><span class="p">,</span><span class="x"> </span><span class="n">v</span><span class="x"> </span><span class="p">[]</span><span class="kt">byte</span><span class="p">)</span><span class="x"> </span><span class="p">(</span><span class="n">Version</span><span class="p">,</span><span class="x"> </span><span class="kt">error</span><span class="p">)</span><span class="x"> </span><span class="p">{</span><span class="x">
-	</span><span class="n">kvs</span><span class="o">.</span><span class="n">RLock</span><span class="p">()</span><span class="x">
-	</span><span class="n">val</span><span class="p">,</span><span class="x"> </span><span class="n">ok</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="n">kvs</span><span class="o">.</span><span class="n">kvMap</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="x">
-	</span><span class="k">if</span><span class="x"> </span><span class="o">!</span><span class="n">ok</span><span class="x"> </span><span class="p">{</span><span class="x">
-		</span><span class="n">kvs</span><span class="o">.</span><span class="n">RUnlock</span><span class="p">()</span><span class="x">
-		</span><span class="k">return</span><span class="x"> </span><span class="n">kvs</span><span class="o">.</span><span class="n">createOrUpdate</span><span class="p">(</span><span class="n">key</span><span class="p">,</span><span class="x"> </span><span class="n">v</span><span class="p">)</span><span class="x">
-	</span><span class="p">}</span><span class="x">
-	</span><span class="n">buf</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="x"> </span><span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">))</span><span class="x">
-	</span><span class="nb">copy</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="x"> </span><span class="n">v</span><span class="p">)</span><span class="x">
-	</span><span class="k">var</span><span class="x"> </span><span class="n">expected</span><span class="x"> </span><span class="kt">uint64</span><span class="x">
-	</span><span class="n">verp</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="n">val</span><span class="o">.</span><span class="n">version</span><span class="x">
-	</span><span class="k">if</span><span class="x"> </span><span class="n">ver</span><span class="x"> </span><span class="o">!=</span><span class="x"> </span><span class="no">nil</span><span class="x"> </span><span class="p">{</span><span class="x">
-		</span><span class="n">expected</span><span class="x"> </span><span class="o">=</span><span class="x"> </span><span class="kt">uint64</span><span class="p">(</span><span class="o">*</span><span class="n">ver</span><span class="p">)</span><span class="x">
-	</span><span class="p">}</span><span class="x"> </span><span class="k">else</span><span class="x"> </span><span class="p">{</span><span class="x">
-		</span><span class="n">expected</span><span class="x"> </span><span class="o">=</span><span class="x"> </span><span class="n">atomic</span><span class="o">.</span><span class="n">LoadUint64</span><span class="p">(</span><span class="n">verp</span><span class="p">)</span><span class="x">
-	</span><span class="p">}</span><span class="x">
-	</span><span class="k">if</span><span class="x"> </span><span class="n">expected</span><span class="o">%</span><span class="m">2</span><span class="x"> </span><span class="o">!=</span><span class="x"> </span><span class="m">0</span><span class="x"> </span><span class="p">{</span><span class="x">
-		</span><span class="k">if</span><span class="x"> </span><span class="n">ver</span><span class="x"> </span><span class="o">!=</span><span class="x"> </span><span class="no">nil</span><span class="x"> </span><span class="p">{</span><span class="x">
-			</span><span class="k">return</span><span class="x"> </span><span class="m">0</span><span class="p">,</span><span class="x"> </span><span class="n">fmt</span><span class="o">.</span><span class="n">Errorf</span><span class="p">(</span><span class="s">"Invalid version"</span><span class="p">)</span><span class="x">
-		</span><span class="p">}</span><span class="x">
-		</span><span class="k">return</span><span class="x"> </span><span class="m">0</span><span class="p">,</span><span class="x"> </span><span class="n">ConflictErr</span><span class="x">
-	</span><span class="p">}</span><span class="x">
-	</span><span class="k">if</span><span class="x"> </span><span class="n">atomic</span><span class="o">.</span><span class="n">CompareAndSwapUint64</span><span class="p">(</span><span class="n">verp</span><span class="p">,</span><span class="x"> </span><span class="n">expected</span><span class="p">,</span><span class="x"> </span><span class="n">expected</span><span class="o">+</span><span class="m">1</span><span class="p">)</span><span class="x"> </span><span class="p">{</span><span class="x">
-		</span><span class="n">val</span><span class="o">.</span><span class="n">data</span><span class="x"> </span><span class="o">=</span><span class="x"> </span><span class="n">buf</span><span class="x">
-		</span><span class="n">atomic</span><span class="o">.</span><span class="n">StoreUint64</span><span class="p">(</span><span class="n">verp</span><span class="p">,</span><span class="x"> </span><span class="n">expected</span><span class="o">+</span><span class="m">2</span><span class="p">)</span><span class="x">
-		</span><span class="k">return</span><span class="x"> </span><span class="n">Version</span><span class="p">(</span><span class="n">expected</span><span class="x"> </span><span class="o">+</span><span class="x"> </span><span class="m">2</span><span class="p">),</span><span class="x"> </span><span class="no">nil</span><span class="x">
-	</span><span class="p">}</span><span class="x">
-	</span><span class="k">if</span><span class="x"> </span><span class="n">ver</span><span class="x"> </span><span class="o">!=</span><span class="x"> </span><span class="no">nil</span><span class="x"> </span><span class="p">{</span><span class="x">
-		</span><span class="k">return</span><span class="x"> </span><span class="m">0</span><span class="p">,</span><span class="x"> </span><span class="n">StaleVersionErr</span><span class="x">
-	</span><span class="p">}</span><span class="x">
-	</span><span class="k">return</span><span class="x"> </span><span class="m">0</span><span class="p">,</span><span class="x"> </span><span class="n">ConflictErr</span><span class="x">
-</span><span class="p">}</span><span class="x">
+</pre></td><td class="code"><pre><span class="c">// Put associates the value with the given key. When ver is not </span>
+<span class="c">// nil, it updates only if the given version matches the current one. </span>
+<span class="c">// When using non-nil ver, the client must provide a version received </span>
+<span class="c">// from a previous successful Put or Get. Any other version may </span>
+<span class="c">// result in an unexpected behavior.</span>
+<span class="k">func</span> <span class="p">(</span><span class="n">kvs</span> <span class="o">*</span><span class="n">CSKVStore</span><span class="p">)</span> <span class="n">Put</span><span class="p">(</span><span class="n">key</span> <span class="kt">string</span><span class="p">,</span> <span class="n">ver</span> <span class="o">*</span><span class="n">Version</span><span class="p">,</span> <span class="n">v</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="p">(</span><span class="n">Version</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="n">kvs</span><span class="o">.</span><span class="n">RLock</span><span class="p">()</span>
+	<span class="n">val</span><span class="p">,</span> <span class="n">ok</span> <span class="o">:=</span> <span class="n">kvs</span><span class="o">.</span><span class="n">kvMap</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+	<span class="k">if</span> <span class="o">!</span><span class="n">ok</span> <span class="p">{</span>
+		<span class="n">kvs</span><span class="o">.</span><span class="n">RUnlock</span><span class="p">()</span>
+		<span class="k">return</span> <span class="n">kvs</span><span class="o">.</span><span class="n">createOrUpdate</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="n">buf</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
+	<span class="nb">copy</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+	<span class="k">var</span> <span class="n">expected</span> <span class="kt">uint64</span>
+	<span class="n">verp</span> <span class="o">:=</span> <span class="n">val</span><span class="o">.</span><span class="n">version</span>
+	<span class="k">if</span> <span class="n">ver</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+		<span class="n">expected</span> <span class="o">=</span> <span class="kt">uint64</span><span class="p">(</span><span class="o">*</span><span class="n">ver</span><span class="p">)</span>
+	<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+		<span class="n">expected</span> <span class="o">=</span> <span class="n">atomic</span><span class="o">.</span><span class="n">LoadUint64</span><span class="p">(</span><span class="n">verp</span><span class="p">)</span>
+	<span class="p">}</span>
+	<span class="k">if</span> <span class="n">expected</span><span class="o">%</span><span class="m">2</span> <span class="o">!=</span> <span class="m">0</span> <span class="p">{</span>
+		<span class="k">if</span> <span class="n">ver</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+			<span class="k">return</span> <span class="m">0</span><span class="p">,</span> <span class="n">fmt</span><span class="o">.</span><span class="n">Errorf</span><span class="p">(</span><span class="s">"Invalid version"</span><span class="p">)</span>
+		<span class="p">}</span>
+		<span class="k">return</span> <span class="m">0</span><span class="p">,</span> <span class="n">ConflictErr</span>
+	<span class="p">}</span>
+	<span class="k">if</span> <span class="n">atomic</span><span class="o">.</span><span class="n">CompareAndSwapUint64</span><span class="p">(</span><span class="n">verp</span><span class="p">,</span> <span class="n">expected</span><span class="p">,</span> <span class="n">expected</span><span class="o">+</span><span class="m">1</span><span class="p">)</span> <span class="p">{</span>
+		<span class="n">val</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">buf</span>
+		<span class="n">atomic</span><span class="o">.</span><span class="n">StoreUint64</span><span class="p">(</span><span class="n">verp</span><span class="p">,</span> <span class="n">expected</span><span class="o">+</span><span class="m">2</span><span class="p">)</span>
+		<span class="k">return</span> <span class="n">Version</span><span class="p">(</span><span class="n">expected</span> <span class="o">+</span> <span class="m">2</span><span class="p">),</span> <span class="no">nil</span>
+	<span class="p">}</span>
+	<span class="k">if</span> <span class="n">ver</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+		<span class="k">return</span> <span class="m">0</span><span class="p">,</span> <span class="n">StaleVersionErr</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="m">0</span><span class="p">,</span> <span class="n">ConflictErr</span>
+<span class="p">}</span>
 
-</span><span class="c">// createOrUpdate associates the value to the key. It works whether</span><span class="x">
-</span><span class="c">// the key is existing or not. It acquires an exclusive lock.</span><span class="x">
-</span><span class="k">func</span><span class="x"> </span><span class="p">(</span><span class="n">kvs</span><span class="x"> </span><span class="o">*</span><span class="n">CSKVStore</span><span class="p">)</span><span class="x"> </span><span class="n">createOrUpdate</span><span class="p">(</span><span class="n">key</span><span class="x"> </span><span class="kt">string</span><span class="p">,</span><span class="x"> </span><span class="n">v</span><span class="x"> </span><span class="p">[]</span><span class="kt">byte</span><span class="p">)</span><span class="x"> </span><span class="p">(</span><span class="n">Version</span><span class="p">,</span><span class="x"> </span><span class="kt">error</span><span class="p">)</span><span class="x"> </span><span class="p">{</span><span class="x">
-	</span><span class="n">buf</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span><span class="x"> </span><span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">))</span><span class="x">
-	</span><span class="nb">copy</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span><span class="x"> </span><span class="n">v</span><span class="p">)</span><span class="x">
-	</span><span class="n">kvs</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span><span class="x">
-	</span><span class="k">defer</span><span class="x"> </span><span class="n">kvs</span><span class="o">.</span><span class="n">Unlock</span><span class="p">()</span><span class="x">
-	</span><span class="n">val</span><span class="p">,</span><span class="x"> </span><span class="n">ok</span><span class="x"> </span><span class="o">:=</span><span class="x"> </span><span class="n">kvs</span><span class="o">.</span><span class="n">kvMap</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="x">
-	</span><span class="k">if</span><span class="x"> </span><span class="o">!</span><span class="n">ok</span><span class="x"> </span><span class="p">{</span><span class="x">
-		</span><span class="k">var</span><span class="x"> </span><span class="n">version</span><span class="x"> </span><span class="kt">uint64</span><span class="x">
-		</span><span class="n">val</span><span class="x"> </span><span class="o">=</span><span class="x"> </span><span class="o">&amp;</span><span class="n">value</span><span class="p">{</span><span class="n">version</span><span class="o">:</span><span class="x"> </span><span class="o">&amp;</span><span class="n">version</span><span class="p">}</span><span class="x">
-	</span><span class="p">}</span><span class="x">
-	</span><span class="n">val</span><span class="o">.</span><span class="n">data</span><span class="x"> </span><span class="o">=</span><span class="x"> </span><span class="n">buf</span><span class="x">
-	</span><span class="n">kvs</span><span class="o">.</span><span class="n">kvMap</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="x"> </span><span class="o">=</span><span class="x"> </span><span class="n">val</span><span class="x">
-	</span><span class="k">return</span><span class="x"> </span><span class="n">Version</span><span class="p">(</span><span class="o">*</span><span class="n">val</span><span class="o">.</span><span class="n">version</span><span class="p">),</span><span class="x"> </span><span class="no">nil</span><span class="x">
-</span><span class="p">}</span></pre></td></tr></tbody></table></code></pre></figure>
+<span class="c">// createOrUpdate associates the value to the key. It works whether</span>
+<span class="c">// the key is existing or not. It acquires an exclusive lock.</span>
+<span class="k">func</span> <span class="p">(</span><span class="n">kvs</span> <span class="o">*</span><span class="n">CSKVStore</span><span class="p">)</span> <span class="n">createOrUpdate</span><span class="p">(</span><span class="n">key</span> <span class="kt">string</span><span class="p">,</span> <span class="n">v</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="p">(</span><span class="n">Version</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+	<span class="n">buf</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
+	<span class="nb">copy</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+	<span class="n">kvs</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+	<span class="k">defer</span> <span class="n">kvs</span><span class="o">.</span><span class="n">Unlock</span><span class="p">()</span>
+	<span class="n">val</span><span class="p">,</span> <span class="n">ok</span> <span class="o">:=</span> <span class="n">kvs</span><span class="o">.</span><span class="n">kvMap</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+	<span class="k">if</span> <span class="o">!</span><span class="n">ok</span> <span class="p">{</span>
+		<span class="k">var</span> <span class="n">version</span> <span class="kt">uint64</span>
+		<span class="n">val</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">value</span><span class="p">{</span><span class="n">version</span><span class="o">:</span> <span class="o">&amp;</span><span class="n">version</span><span class="p">}</span>
+	<span class="p">}</span>
+	<span class="n">val</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">buf</span>
+	<span class="n">kvs</span><span class="o">.</span><span class="n">kvMap</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>
+	<span class="k">return</span> <span class="n">Version</span><span class="p">(</span><span class="o">*</span><span class="n">val</span><span class="o">.</span><span class="n">version</span><span class="p">),</span> <span class="no">nil</span>
+<span class="p">}</span>
+</pre></td></tr></tbody></table></code></pre></figure>
 
-<p>The above code is somewhat subtle. The key to understanding it is to realize that we are implicitly using the parity of the version as a local lock. A successful write increases the version by 2 (line 30), while an unsuccessful one does not change it. In more detail, note that the only times the version is odd are after lines 28 &amp; 29. This is the critical section of the code. For example, suppose some thread A has reached and stopped in the middle of this section. If another thread B computes <code class="highlighter-rouge">expected</code> version (line 18 or 20) and tries to enter the critical section, it will fail either in line 22 or 28, due to either staleness of its version (since it has read the version before A had increased it in line 28) or because of its parity (in case it has read the version after A made it odd in line 28). This ensures the integrity of writes.</p>
+<p>The above code is somewhat subtle. The key to understanding it is to realize that we are implicitly using the parity of the version as a local lock. A successful write increases the version by 2 (line 30), while an unsuccessful one does not change it. In more detail, note that the only times the version is odd are after lines 28 &amp; 29. This is the critical section of the code. For example, suppose some thread A has reached and stopped in the middle of this section. If another thread B computes <code class="language-plaintext highlighter-rouge">expected</code> version (line 18 or 20) and tries to enter the critical section, it will fail either in line 22 or 28, due to either staleness of its version (since it has read the version before A had increased it in line 28) or because of its parity (in case it has read the version after A made it odd in line 28). This ensures the integrity of writes.</p>
 
 <h2 id="tradeoffs">Tradeoffs</h2>
 
@@ -371,7 +373,7 @@
 
 <h2 id="conclusion">Conclusion</h2>
 
-<p>The ideas we have been discussing about optimistic systems are not just theory. They are for example used often in some of the most powerful popular databases such as <a href="https://www.postgresql.org/docs/9.1/mvcc-intro.html">PostgreSQL</a>, <a href="https://dev.mysql.com/doc/refman/8.0/en/innodb-multi-versioning.html">MySQL</a>, <a href="https://www.cockroachlabs.com/docs/stable/architecture/storage-layer.html#mvcc">CockroachDB</a>, etc. Outside the world of databases, these ideas are useful in the internet protocols. In particular, when modifying resources via a REST API, most applications do not consider locking to be a good idea and instead rely on headers such as <code class="highlighter-rouge">if-not-modified-since</code> to achieve transactional behavior in an optimistic way.</p>
+<p>The ideas we have been discussing about optimistic systems are not just theory. They are for example used often in some of the most powerful popular databases such as <a href="https://www.postgresql.org/docs/9.1/mvcc-intro.html">PostgreSQL</a>, <a href="https://dev.mysql.com/doc/refman/8.0/en/innodb-multi-versioning.html">MySQL</a>, <a href="https://www.cockroachlabs.com/docs/stable/architecture/storage-layer.html#mvcc">CockroachDB</a>, etc. Outside the world of databases, these ideas are useful in the internet protocols. In particular, when modifying resources via a REST API, most applications do not consider locking to be a good idea and instead rely on headers such as <code class="language-plaintext highlighter-rouge">if-not-modified-since</code> to achieve transactional behavior in an optimistic way.</p>
 
 <p>Finally, we note that concurrency is a subtle subject. Even the most seasoned professionals sometimes make mistakes using it. Hence, it’s important not to be lured by it when your application does not actually require or benefit much from it. But once these powerful methods become important and you start on the quest of designing your concurrent system, have in mind optimistic design principles. And always do extensive testing.</p>
 

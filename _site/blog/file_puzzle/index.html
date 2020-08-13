@@ -194,41 +194,41 @@
 
 
 <span class="k">def</span> <span class="nf">filesystem_puzzle</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
-    <span class="c"># create file</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s">'w'</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-        <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">'When in the course '</span><span class="p">)</span>
+    <span class="c1"># create file
+</span>    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s">'w'</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">f</span><span class="p">.</span><span class="n">write</span><span class="p">(</span><span class="s">'When in the course '</span><span class="p">)</span>
 
-    <span class="c"># open the file again</span>
-    <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s">"r+"</span><span class="p">)</span>
-    <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
-    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">'of human events, '</span><span class="p">)</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="c"># remove the file but continue read &amp; write</span>
-    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">'it becomes necessary...'</span><span class="p">)</span>
-    <span class="n">f</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-    <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
-    <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="c1"># open the file again
+</span>    <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s">"r+"</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="p">.</span><span class="n">read</span><span class="p">())</span>
+    <span class="n">f</span><span class="p">.</span><span class="n">write</span><span class="p">(</span><span class="s">'of human events, '</span><span class="p">)</span>
+    <span class="n">os</span><span class="p">.</span><span class="n">remove</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="c1"># remove the file but continue read &amp; write
+</span>    <span class="n">f</span><span class="p">.</span><span class="n">write</span><span class="p">(</span><span class="s">'it becomes necessary...'</span><span class="p">)</span>
+    <span class="n">f</span><span class="p">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="p">.</span><span class="n">read</span><span class="p">())</span>
+    <span class="n">f</span><span class="p">.</span><span class="n">close</span><span class="p">()</span>
 
-    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="n">exists</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span><span class="s">'r'</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="p">.</span><span class="n">read</span><span class="p">())</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">'{filename} not found'</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">f'</span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s"> not found'</span><span class="p">)</span>
 
 
 <span class="n">filename</span> <span class="o">=</span> <span class="s">'./post.txt'</span>
 <span class="n">filesystem_puzzle</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
 </code></pre></div></div>
-<p>Even though you might be well-versed in manipulating files, the above program might still show that there are some blindspots in your knowledge. The issue here is the <code class="highlighter-rouge">os.remove</code> and the subsequent write and read; should <code class="highlighter-rouge">os.remove</code> even work when the file is open? Should the subsequent read/write throw an exception?</p>
+<p>Even though you might be well-versed in manipulating files, the above program might still show that there are some blindspots in your knowledge. The issue here is the <code class="language-plaintext highlighter-rouge">os.remove</code> and the subsequent write and read; should <code class="language-plaintext highlighter-rouge">os.remove</code> even work when the file is open? Should the subsequent read/write throw an exception?</p>
 
 <p>As you can expect, this conundrum may happen in many forms of API design. There are often calls to create/remove a resource entirely as well as calls to manipulate the resource incrementally (e.g. write/read here), and it can be tricky to design their interactions.</p>
 
 <p>In the case of filesystems and the above program, it turns out the above is safe and does not throw any exception. The output is the following:</p>
 
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>When in the course 
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>When in the course 
 When in the course of human events, it becomes necessary...
 ./post.txt not found
 </code></pre></div></div>
-<p>The key to understanding this is to consider the point of view of the API designer. What should <code class="highlighter-rouge">os.remove</code> do? Should it go and laboriously delete all blocks associated to a file from disk? Upon reflection, it is clear that’s not such a good idea: it is slow, unnecessary, and as the above program demonstrates, error-prone (especially if you note that the <code class="highlighter-rouge">os.remove</code> could have been called concurrently from a different process or thread). Only thing that <code class="highlighter-rouge">os.remove</code> does is to remove the link from the current directory to <code class="highlighter-rouge">post.txt</code> inode. It does not touch the open file descriptor <code class="highlighter-rouge">f</code> that is being written to. This is confirmed by looking up <code class="highlighter-rouge">unlink</code> system call <a href="https://linux.die.net/man/2/unlink">documentation</a>, which also explains how the space is reclaimed from disk eventually.</p>
+<p>The key to understanding this is to consider the point of view of the API designer. What should <code class="language-plaintext highlighter-rouge">os.remove</code> do? Should it go and laboriously delete all blocks associated to a file from disk? Upon reflection, it is clear that’s not such a good idea: it is slow, unnecessary, and as the above program demonstrates, error-prone (especially if you note that the <code class="language-plaintext highlighter-rouge">os.remove</code> could have been called concurrently from a different process or thread). Only thing that <code class="language-plaintext highlighter-rouge">os.remove</code> does is to remove the link from the current directory to <code class="language-plaintext highlighter-rouge">post.txt</code> inode. It does not touch the open file descriptor <code class="language-plaintext highlighter-rouge">f</code> that is being written to. This is confirmed by looking up <code class="language-plaintext highlighter-rouge">unlink</code> system call <a href="https://linux.die.net/man/2/unlink">documentation</a>, which also explains how the space is reclaimed from disk eventually.</p>
 
 <p><em>unlink() deletes a name from the filesystem.  If that name was the
 last link to a file and no processes have the file open, the file is
