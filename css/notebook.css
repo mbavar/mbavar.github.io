@@ -361,3 +361,64 @@ a:focus-visible{outline:2px solid var(--accent);
 a{transition:none}
 }
 
+
+/* Portrait framing preserves the original photograph. */
+.home-heading--portrait {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 224px;
+  align-items: center;
+  gap: 64px;
+}
+.home-portrait {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--tint);
+}
+.home-portrait img {
+  position: absolute;
+  width: 450%;
+  max-width: none;
+  height: auto;
+  left: -220%;
+  top: -170%;
+}
+@media (max-width: 900px) {
+  .home-heading--portrait {
+    grid-template-columns: minmax(0, 1fr) 160px;
+    gap: 32px;
+  }
+  .home-heading--portrait h1 {
+    font-size: clamp(36px, 6.3vw, 62px);
+    letter-spacing: -2.5px;
+  }
+}
+@media (max-width: 600px) {
+  .home-heading--portrait {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  .home-portrait {
+    width: 144px;
+    grid-row: 1;
+  }
+  .home-heading--portrait h1 {
+    font-size: clamp(36px, 12vw, 54px);
+  }
+}
+
+@media (max-width: 480px) {
+  .site-nav { gap: 14px; font-size: 12px; }
+  .site-nav a { display: inline-flex; align-items: center; min-height: 44px; }
+}
+
+@media (max-width: 600px) {
+  .home-heading--portrait { gap: 24px; }
+  .home-intro { display: contents; }
+  .home-intro .eyebrow { grid-row: 1; }
+  .home-portrait { grid-row: 2; }
+  .home-heading--portrait h1 { grid-row: 3; margin: 0; }
+  .home-subtitle { grid-row: 4; }
+}

@@ -5,11 +5,15 @@ subtitle: Notes and Blog
 use-site-title: true
 ---
 <main id="main-content" class="shell home" tabindex="-1">
-  <header class="home-heading">
-    <p class="eyebrow"><span class="accent-mark" aria-hidden="true"></span>Personal website</p>
-    <h1>Mo Bavarian</h1>
-    <p class="home-subtitle">{{ page.subtitle }}</p>
-    <span class="hero-bracket" aria-hidden="true">[mb]</span>
+  <header class="home-heading home-heading--portrait">
+    <div class="home-intro">
+      <p class="eyebrow"><span class="accent-mark" aria-hidden="true"></span>Personal website</p>
+      <h1>Mo Bavarian</h1>
+      <p class="home-subtitle">{{ page.subtitle }}</p>
+    </div>
+    <div class="home-portrait">
+      <img src="{{ '/img/mo-bavarian-coast.jpg' | relative_url }}" alt="Mo Bavarian smiling on a terrace overlooking the coast" width="4284" height="5712" fetchpriority="high">
+    </div>
   </header>
   <section class="writing" aria-labelledby="writing-heading">
     <div class="section-heading"><h2 id="writing-heading">Notes and Blog</h2><span class="eyebrow">{{ site.posts | size }} entries <span aria-hidden="true">↙</span></span></div>
