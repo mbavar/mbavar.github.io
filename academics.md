@@ -6,7 +6,7 @@ subtitle:
 
 I obtained my PhD from MIT [theory of computation](https://toc.csail.mit.edu/) group in CSAIL. Specifically, I worked on the implications of quantum computing to Theoretical CS. In my thesis, I presented my work on the [PCP theorem](https://en.wikipedia.org/wiki/PCP_theorem) and the [Unique Games Conjecture](https://en.wikipedia.org/wiki/Unique_games_conjecture) in the quantum setting under the supervision of Prof. [Madhu Sudan](http://madhu.seas.harvard.edu/). You can find a copy of my PhD thesis [here](https://bavarian.dev/pdf/bavarian_thesis.pdf).
 
-I now work in industry pursuing a career in software engineering and machine learning.
+I now work in industry pursuing a career in AI.
 
 ## Selected Publications
 

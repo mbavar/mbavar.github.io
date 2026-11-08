@@ -1,59 +1,37 @@
 ---
-layout: page
-title: "Mohammad Bavarian" 
-subtitle: Notes and Blog 
+layout: base
+title: "Mo Bavarian"
+subtitle: Notes and Blog
 use-site-title: true
 ---
-
-<div class="posts-list">
-  {% for post in paginator.posts %}
-  <article class="post-preview">
-    <a href="{{ post.url | relative_url }}">
-	  <h1 class="post-title">{{ post.title }}</h1>
-
-	  {% if post.subtitle %}
-	  <h4 class="post-subtitle">
-	    {{ post.subtitle }}
-	  </h4>
-	  {% endif %}
-    </a>
-
-    <p class="post-meta">
-      Posted on {{ post.date | date: site.date_format }}
-    </p>
-
-    <div class="post-entry-container">
-      {% if post.image %}
-      <div class="post-image">
-        <a href="{{ post.url | relative_url }}">
-          <img src="{{ post.image | relative_url }}">
-        </a>
-      </div>
-      {% endif %}
-      <div class="post-entry">
-        {{ post.excerpt | strip_html | xml_escape | truncatewords: site.excerpt_length }}
-        {% assign excerpt_word_count = post.excerpt | number_of_words %}
-        {% if post.content != post.excerpt or excerpt_word_count > site.excerpt_length %}
-          <a href="{{ post.url | relative_url }}" class="post-read-more">[Read&nbsp;More]</a>
-        {% endif %}
-      </div>
+<main id="main-content" class="shell home" tabindex="-1">
+  <header class="home-heading">
+    <p class="eyebrow"><span class="accent-mark" aria-hidden="true"></span>Personal website</p>
+    <h1>Mo Bavarian</h1>
+    <p class="home-subtitle">{{ page.subtitle }}</p>
+    <span class="hero-bracket" aria-hidden="true">[mb]</span>
+  </header>
+  <section class="writing" aria-labelledby="writing-heading">
+    <div class="section-heading"><h2 id="writing-heading">Notes and Blog</h2><span class="eyebrow">{{ site.posts | size }} entries <span aria-hidden="true">↙</span></span></div>
+    <div class="posts-list">
+    {% for post in paginator.posts %}
+      <article class="post-preview">
+        <div class="post-meta"><time datetime="{{ post.date | date_to_xmlschema }}">{{ post.date | date: '%b %d, %Y' }}</time><span class="post-number" aria-hidden="true">{{ forloop.index | prepend: '0' }}</span></div>
+        <div class="post-summary">
+          <h3><a href="{{ post.url | relative_url }}">{{ post.title }}<span class="post-arrow" aria-hidden="true">↗</span></a></h3>
+          {% if post.subtitle %}<p class="subtitle">{{ post.subtitle }}</p>{% endif %}
+          <p class="post-excerpt">{{ post.excerpt | strip_html | xml_escape | truncatewords: site.excerpt_length }}</p>
+          {% assign excerpt_word_count = post.excerpt | number_of_words %}
+          {% if post.content != post.excerpt or excerpt_word_count > site.excerpt_length %}<a href="{{ post.url | relative_url }}" class="read-more" aria-label="Read more: {{ post.title | escape }}">Read more <span aria-hidden="true">&rarr;</span></a>{% endif %}
+        </div>
+      </article>
+    {% endfor %}
     </div>
-
-   </article>
-  {% endfor %}
-</div>
-
-{% if paginator.total_pages > 1 %}
-<ul class="pager main-pager">
-  {% if paginator.previous_page %}
-  <li class="previous">
-    <a href="{{ paginator.previous_page_path | relative_url }}">&larr; Newer Posts</a>
-  </li>
+  </section>
+  {% if paginator.total_pages > 1 %}
+  <nav class="post-pagination" aria-label="Blog pages">
+    <div>{% if paginator.previous_page %}<a href="{{ paginator.previous_page_path | relative_url }}">&larr; Newer Posts</a>{% endif %}</div>
+    <div>{% if paginator.next_page %}<a href="{{ paginator.next_page_path | relative_url }}">Older Posts &rarr;</a>{% endif %}</div>
+  </nav>
   {% endif %}
-  {% if paginator.next_page %}
-  <li class="next">
-    <a href="{{ paginator.next_page_path | relative_url }}">Older Posts &rarr;</a>
-  </li>
-  {% endif %}
-</ul>
-{% endif %}
+</main>

@@ -1,13 +1,14 @@
 ---
 layout: page
 title: About me
-subtitle: 
+subtitle:
 ---
 
-I graduated from MIT in 2017 with a PhD in Theoretical CS. I currently work at [OpenAI](https://openai.com/) doing machine learning research. Before this, I was a Software Engineer at [Rubrik](https://www.rubrik.com/) in Palo Alto, CA working on distributed systems, cloud, and backend technologies.
+Since September 2020, I have been doing AI research at [OpenAI](https://openai.com/). I started my AI research career working on pretraining data and co-wrote the first Codegen paper. My work has also included capability prediction (scaling laws for evals beyond perplexity), optimization and multi-cluster training, and long-context pretraining. I was a primary contributor to GPT-3.5, which powered the first version of ChatGPT, and GPT-4.
 
-My interests are broadly in distributed systems and machine learning.
- 
+For the past two years, I have been leading a team focused on reasoning, memory, and test-time training.
+
+Before joining OpenAI, I was a software engineer at [Rubrik](https://www.rubrik.com/) in Palo Alto, CA, working on distributed systems, cloud, and backend technologies. I earned my PhD in Theoretical CS from MIT in 2017.
 
 ### contact
 
