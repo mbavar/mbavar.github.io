@@ -2,10 +2,17 @@
 layout: base
 ---
 <main id="main-content" class="reading-page shell" tabindex="-1">
-  <header class="page-heading">
-    <p class="eyebrow">bavarian.dev / {% if page.url contains 'academics' %}research{% elsif page.url contains 'aboutme' %}about{% else %}index{% endif %}</p>
-    <h1>{{ page.title }}</h1>
-    {% if page.subtitle %}<p class="subtitle">{{ page.subtitle }}</p>{% endif %}
+  <header class="page-heading{% if page.portrait %} page-heading--portrait{% endif %}">
+    <div class="page-heading-text">
+      <p class="eyebrow">bavarian.dev / {% if page.url contains 'academics' %}research{% elsif page.url contains 'aboutme' %}about{% else %}index{% endif %}</p>
+      <h1>{{ page.title }}</h1>
+      {% if page.subtitle %}<p class="subtitle">{{ page.subtitle }}</p>{% endif %}
+    </div>
+    {% if page.portrait %}
+    <div class="profile-portrait">
+      <img src="{{ page.portrait | relative_url }}" alt="{{ page.portrait-alt | escape }}" width="4284" height="5712" fetchpriority="high">
+    </div>
+    {% endif %}
   </header>
   <div class="prose">{{ content }}</div>
   {% if page.comments %}{% include disqus.html %}{% include fb-comment.html %}{% include staticman-comments.html %}{% include just_comments.html %}{% endif %}
