@@ -367,7 +367,7 @@ a{transition:none}
 /* Profile portrait retains the existing crop. */
 .page-heading--portrait {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 176px;
+  grid-template-columns: minmax(0, 1fr) 208px;
   align-items: center;
   gap: 40px;
 }
