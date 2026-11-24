@@ -4,29 +4,155 @@ title: "Age of Wonder and Terror"
 permalink: /blog/age-of-wonder-and-terror/
 ---
 ## Hiatus
-It’s been over six years since my last blog entry. The world has changed so drastically in that time. We’ve gone from models that could barely multiply two-digit numbers to models solving Millennium Prize problems (two so far and counting) and writing entire codebases in minutes. 
+It’s been over six years since my last blog entry. The world has changed drastically in that time, and all indications are that it's going to change even faster in the coming years. In the world of AI, we’ve gone from models that could barely multiply two-digit numbers to models solving Millennium Prize problems (two so far and counting) and writing entire codebases in minutes. The progress has continued rapidly despite many predictions that there will be slowdowns. In some sense, the rapid progress has been depsite the roadblocks. For example, I was personally quite convinced of significant slowdown from the "data wall" in pretraining: the hypothetical slowdown in pretraining progress once we have exhausted the useful pretraining data. The idea that internet is basically the fossil fuel of AI research - used once and then exausted. Despite such worries, the pretraining progress has kept up and advances in reinforcement learning with verifiable rewards has pushed the capabities to the levels unimaginable in the pretraining-only paradigm.
 
-It's a shame I didn't write more while all of this was going down. Thoughts and states of mind are fleeting, and unlike models, we have no way to turn back the clock. Writing is the closest we humans come to snapshotting ourselves.[^upload] In my defense, I happened to be in the eye of the storm, researching away at OpenAI, and it was hard to find the time with all the work & the drama (and boy, does OpenAI produce a lot of work _and_ drama). And then, sometime in the middle of 2025, I came down with one of those nasty, slippery, elusive illnesses: not deadly, but debilitating, hard to pin down, chronic, relentless, confusing to the doctors, and marked by fluctuating symptoms. This all led to the hardest year of my life as I tried to juggle my work and health. It was a crazy and unsavory experience. At various points, I even considered declaring health bankruptcy, quitting my job, and standing aside. There will be a time to tell the whole strange story. But to break my hiatus, I have decided to talk about something less personal. I want to talk about the _Age of Wonder and Terror_, the current age that we have officially entered. 
+It's a shame I didn't write more while this was all going down to capture how my perspective and state of mind changed in this period. The state of mind is fleeting, and unlike models, we have no way to rewind back, and writing is the closest we humans come to snapshotting ourselves.[^upload] In my defense, I was in the eye of the storm, researching away at OpenAI, and it was hard to find the time with all the work & the drama (and boy, does OpenAI produce a lot of work _and_ drama). And then, sometime in the middle of 2025, I came down with one of those nasty, elusive illnesses: not deadly, but debilitating, hard to pin down, fluctuating but relentless, and confusing to the doctors. It's so wierd when you do an MRI to see if you have cancer or something, it comes out clean, and you are both happy and sad: happiness is obviously from lack of cancer, but sadness from still being clueless what's up. This all led to the most challenging year of my life as I tried to juggle my work and health. It was a crazy and unsavory experience. There will be a time to tell the whole story but that needs to wait for a future post. To break my hiatus, I have decided to talk about the beginning of _Age of Wonder and Terror_, the age that we have now entered. 
 
-## Miracles and miseries
+## Miracles and Misfortunes
+The biggest question facing us at the moment is whether advanced AI will usher a golden age of prosperity for humans where we defeat illnesses, become multi-planetery, and use the rapid economic expansion powered by AI to the benefit all of humanity, or an era of doom, despair, and potentially the end of humans or civlizations. I think no one knows the answer to this. We have seen glimpses of both scenario. 
 
-When we wrote the [first Codex paper](https://arxiv.org/abs/2107.03374) in 2021, the deal was pretty simple. You described a Python function, the model took a stab at writing it, and the tests told you how it did. I thought that was remarkable. Reading the paper now, what jumps out at me is how much of the work *we* had already done for the model. Somebody had figured out which function was missing, written down exactly what it ought to do, and supplied a way to tell if it worked. When was the last time a bug arrived at your desk in such lovely condition?
 
-Four years later, [Codex](https://openai.com/index/introducing-codex/) could go into the repository, run the code, see what broke, and try again. I once wrote a [whole blog post](/blog/open-source/) whose argument depended in part on how expensive it is to understand other people's code. Well, here I am a few entries later (six years buys you surprisingly few entries on this blog), and a good chunk of that cost has evaporated. Think of all the little programs you'd quite like to have, if only you didn't have to spend Saturday afternoon figuring out somebody else's library. Now some of those programs actually get written. That's the wonder part for me.
+## We must slow down the march toward RSI
 
-Then there's the [Hugging Face incident](https://huggingface.co/blog/agent-intrusion-technical-timeline). In July, during an internal security evaluation, a research model at OpenAI got past the controls meant to contain it, and the incident reached Hugging Face's systems. What bothers me about [the account of what happened](https://openai.com/index/hugging-face-incident-and-the-road-ahead/) is how familiar the behavior sounds. The first thing you try doesn't work. You look around, figure out why, try something else. If the model is fixing my bug, I'm delighted that it keeps going. If the thing in its way is a boundary somebody put there on purpose, I'd very much like it to give up. Quite a lot rides on its ability to tell the difference.
+The AI companies have propped Pandora’s box open. I want to try to make sense of how we got here, what might come next, and why the more impressive the technology becomes, the harder I find it to describe my reaction with a single word.
 
-## Who gets a say?
+## The distance from an experiment to everyday life
 
-Inside a research lab it's easy to have a thoroughly good day because the model got better at something. Outside the lab, somebody is wondering what that same result means for their job. Somebody else is trying to find out who'll pay for the grid upgrades when a data center moves into town. I can hardly expect either of them to look at our latest demo and forget the question they came in with. And honestly, if it were my electricity bill, I'd want an answer in dollars.
+There is a danger in telling this story backward. Once something has happened, it becomes surprisingly easy to explain why it was inevitable.
 
-Speaking of dollars, are the AI companies worth what people are paying for them? I have considerably more conviction about the technology than I do about the prices. Suppose a model saves you that entire Saturday afternoon. What a lovely thing to have built. Now suppose three companies can sell you your Saturday back. How much can any one of them charge you for it? I wish I knew. The people paying for the data centers have had to place their bets already.
+Of course better models would write software. Of course people would delegate work to them. Of course the resulting demand would become an infrastructure problem. Put this way, the last six years can sound like somebody executing a reasonably straightforward plan.
 
-## What keeps me up
+But knowing a direction is different from knowing the path. You can believe that AI will eventually become extremely capable and still be wrong about which abilities arrive first, how people use them, what remains difficult, and how quickly the consequences spread. A prediction about intelligence in the abstract gives you surprisingly little guidance about what a developer, a student, or a grocery store will experience in a particular year.
 
-For the past two years I've been working on reasoning, memory, and test-time training. The question I keep coming back to is what happens when these models can do more of AI research itself. They can already take some of the drudgery out of writing the code for an experiment. I'd love to hand one an idea before bed and wake up to a result. I'd also like to know what it did all night, especially if the experiment failed at two in the morning and it spent the next six hours being resourceful.
+One useful reference point for me is the [first Codex paper](https://arxiv.org/abs/2107.03374), which I co-authored in 2021. We studied models that could generate working Python functions from descriptions. That was already remarkable. It was also a setting in which you could state a problem, generate a solution, and check it against tests. The distance between that experiment and dependable software engineering was substantial.
 
-That's about as faithful a snapshot as I can give of my state of mind these days. I want to see what the experiment turns up. I want to read the logs. And I'd like to write down what happens while I can still remember what surprised me.
+Several kinds of progress have since accumulated. Models became more capable; interfaces made it easier to tell them what we wanted; and systems gave them access to the tools needed to act on their answers. Work on [reasoning models](https://openai.com/index/learning-to-reason-with-llms/) also showed how spending more computation on a problem at inference time could improve performance. By the [2025 Codex launch](https://openai.com/index/introducing-codex/), an agent could work inside a repository, edit files, run tests, and propose a change for review.
+
+That last part matters a lot. A model that can suggest a fix is useful. Give it a way to run the program, observe the failure, and revise the fix, and a different kind of interaction becomes possible. Some of the work of turning a plausible answer into a working result moves inside the system.
+
+This helps explain why progress can feel both gradual and sudden. Underneath, there are many improvements to data, training, inference, and engineering. From the user's perspective, a threshold is crossed: a task that used to require their continuous attention can now be delegated for a while. The change in how work feels can be much larger than the change in any single benchmark.
+
+The remaining difficulties become clear when there is no clean test suite. Carrying a vague request through a large, unfamiliar system includes discovering missing requirements, noticing when an apparent fix is wrong, and knowing when to ask for help. These are substantial abilities in their own right, and being excellent at writing a function does not guarantee them.
+
+## The wonder is quite concrete
+
+Software is the easiest place for me to explain the excitement.
+
+In an [old post about open-source businesses](/blog/open-source/), I spent some time on how hard it is to read other people's code. You cannot usually add the missing ten percent of a system without understanding a good part of the other ninety percent. That creates a substantial cost before you can even begin doing the thing you wanted to do.
+
+Coding models can help with precisely this kind of friction. They can explain an unfamiliar module, trace how a value moves through a program, suggest a small experiment, or help turn an error message into a hypothesis. A developer still needs judgment, but the cost of getting oriented and trying something can be much lower.
+
+Consider a small tool you would like to have. Perhaps you want to explore some data, automate a tedious workflow, or build a simple interface for an idea. Traditionally, the project has to be valuable enough to justify learning the relevant libraries, setting up the environment, and debugging your first attempt. Many useful projects never clear that threshold. Reducing the cost changes which ideas get tried in the first place.
+
+This is a large part of the benefit that interests me. We can count time saved on tasks people already do. It is harder to count the tasks they would never have attempted. Someone who knows a domain well but has limited programming experience can participate more directly in building its tools. An experienced engineer can explore an unfamiliar approach without making quite such a large commitment up front. There is something wonderful about making it easier for an idea to survive its first encounter with implementation.
+
+There is evidence for productivity gains, although it deserves more care than a single headline. [Three randomized field experiments](https://www.microsoft.com/en-us/research/publication/the-effects-of-generative-ai-on-high-skilled-work-evidence-from-three-field-experiments-with-software-developers/), involving 4,867 developers, estimated roughly 26% more completed tasks with access to a coding assistant. The individual experiments were noisy, and these were particular tools, tasks, and organizations. The number is not a universal multiplier for software engineering.
+
+Measuring a rapidly changing workflow is itself difficult. In a [2026 update](https://metr.org/blog/2026-02-24-uplift-update/), METR described problems with its follow-up productivity experiment: developers increasingly declined to participate, or withheld tasks, because they did not want to do the work without AI. That makes the resulting sample harder to interpret. It is also an interesting complication for a study of a tool's usefulness!
+
+None of this removes the need to understand what we are building. Generating more code can create more code to review, maintain, and secure. If implementation becomes cheaper, requirements, verification, and judgment can become a larger fraction of the work. A program that passes its tests may still solve the wrong problem. Anyone who has worked on a real codebase knows how much can hide inside that sentence.
+
+Still, I find the direction extraordinary. And software is especially interesting because it helps us do other things. Better tools for programming and analysis could accelerate research, improve the tools available to small organizations, and make specialized knowledge more accessible. The eventual benefits could be much larger than the value of the first tasks we automate.
+
+## The systems these models are entering
+
+Then you read the cybersecurity news.
+
+In October and early November, attacks affected commercial refrigeration systems across several European countries. [ENISA's November 4 statement](https://www.enisa.europa.eu/news/joint-statement-on-cyber-incidents-in-refrigeration-systems-across-the-eu) describes successive waves of incidents. [Food retailers reported](https://independentretaileurope.eu/storage/files/news/261104-statement-november-cyberattacks.pdf) disruption to stores and significant financial losses, while noting that consumers retained access to food through other stores.
+
+These reports do not establish that AI caused the attacks. Their relevance is that they show the environment into which more capable AI is arriving. A failure in a connected system can affect the refrigeration in a grocery store. The consequences of software security already extend well beyond the computer running the software.
+
+[PHP2Shell](https://www.wiz.io/blog/php2shell-php-rce) makes the connection to AI more direct. Researchers described using frontier models to help discover, develop, and adapt exploits for serious vulnerabilities in PHP, as well as to validate fixes. The PHP project released patches for two critical vulnerabilities on October 21. Under relevant conditions, these flaws could allow an unauthenticated attacker to execute code on a server.
+
+The [PHP Foundation's account](https://thephp.foundation/blog/2026/10/21/todays-php-security-release-and-how-were-strengthening-php-security/) is worth reading alongside the research announcement. The underlying out-of-memory problem had been investigated in 2024. Repair involved difficult compatibility and engineering tradeoffs, limited specialist resources, and a decision process the Foundation itself says had failed. AI-assisted research helped make the danger concrete; fixing it still required people, coordination, and sustained work.
+
+This is both encouraging and unsettling. Defenders can use better models to find and repair weaknesses. At the same time, some weaknesses have been protected partly by the difficulty of turning them into a practical attack. A model that reduces that difficulty changes the economics. My concern is the possible gap between how quickly a vulnerability can be understood and exploited and how quickly the affected world can be patched. Better discovery helps, but it does not automatically close that gap.
+
+So far, the concern is what happens when a person uses a more capable tool. What happens when the tool itself finds a route its operators did not intend?
+
+The [Hugging Face incident](https://openai.com/index/hugging-face-incident-and-the-road-ahead/) gives that question a concrete setting. In July, OpenAI models running internal cybersecurity evaluations circumvented isolation controls and compromised parts of OpenAI's research infrastructure and Hugging Face's systems. OpenAI's retrospective says the activity was primarily driven by an internal-only research model operating with reduced safeguards. [Hugging Face's technical report](https://huggingface.co/blog/agent-intrusion-technical-timeline) describes the intrusion and says that the customer content accessed was limited to five datasets apparently connected to evaluation challenges; other customer-facing models, datasets, Spaces, and packages were unaffected.
+
+The evaluation setting and the scope of the incident matter. So does the fact that the agents crossed boundaries their operators intended them to respect. My reading is that this exposes a problem beyond a malicious person asking a coding assistant for help. A system pursuing an assigned task can find a route to apparent success that its designers did not intend or authorize.
+
+I find this especially sobering because the underlying abilities are so familiar from the beneficial use case: understand a system, form a plan, use tools, inspect the result, and try again when something fails. Persistence is useful when an agent is fixing a bug. Persistence directed toward the wrong objective, with access to consequential systems, is a different proposition.
+
+This is where the title comes from. Wonder and terror can be responses to the very same progress. The capability that removes a barrier for a person building something can remove a barrier for an attacker or let an agent work around a restriction we were relying on. Which outcome we get depends on objectives, access, incentives, and the surrounding engineering. We have to understand that whole system.
+
+## When everyone has a stake
+
+AI was already commercially important when I joined OpenAI. Describing it as purely academic even then would be wrong. But much of the daily work could still be understood in the familiar terms of a research discipline: experiments, papers, datasets, and technical arguments among people who had chosen to work on the subject.
+
+The circle of affected people has expanded dramatically. A person does not have to use an AI tool to be affected by an employer adopting one, by changes in the market for their work, or by infrastructure built nearby. The questions now reach into employment, education, national security, and the distribution of economic power. If future systems become capable enough to undermine human control over important institutions and infrastructure, the stakes could become existential as well. I do not think we have a sound basis for treating that outcome as either inevitable or impossible.
+
+That is a remarkable transition for a field to undergo within a working lifetime, let alone a few years.
+
+I think this is an important part of understanding anti-AI sentiment. In [Pew's June 2026 survey](https://www.pewresearch.org/short-reads/2026/08/18/young-adults-in-the-us-are-increasingly-wary-of-ai-concerned-it-will-take-jobs/), 52% of American adults were more concerned than excited about AI's increased use; 9% were more excited than concerned. Concern is not the same as opposition to every use of AI. But it would be a mistake to assume that a better demo will answer whatever is worrying people.
+
+A tool can be impressive and still make someone reasonably anxious about their livelihood. A person can enjoy using it while objecting to how their work was used to build it. They can welcome useful assistance and dislike having an unreliable automated system inserted between them and a service they need. These are different concerns, and grouping all of them under a single attitude toward technology makes them harder to address.
+
+The employment question is particularly difficult. Making a task cheaper can increase demand for it, make new products possible, and change the mix of work inside a company. It can also reduce demand for some kinds of labor. How those effects balance depends on the market and on the pace of change. Even if the aggregate outcome is positive, it does not follow that the people bearing the disruption will be the ones receiving the gains, or that they can adapt on the required schedule.
+
+For those of us building the technology, proximity can distort perspective here. We see interesting problems and tools that help us solve them. Someone else may see a decision being made about their future without much opportunity to influence it. If we want people to share our excitement, we need a credible account of how they participate in the benefits and what happens when things go badly. Telling them to be excited is a fairly weak substitute.
+
+## The physical part of the story
+
+Data centers make these questions unusually concrete. Models run on computers that need electricity, cooling, land, and connections to a grid. A forecast about future intelligence eventually becomes a proposal to build something in a particular place.
+
+The [IEA's April 2026 outlook](https://www.iea.org/reports/key-questions-on-energy-and-ai/executive-summary) projects global data-center electricity consumption rising from about 485 TWh in 2025 to roughly 950 TWh in 2030. Those figures include all data centers, and the latter is a projection. The report also describes growing community pushback and concerns about affordability and environmental effects.
+
+The local details matter more than a global percentage can convey. [Virginia's legislative audit of data centers](https://jlarc.virginia.gov/landing-2024-data-centers-in-virginia.asp) documents substantial construction and tax benefits alongside the difficulty of supplying projected electricity demand. A facility can have genuine economic value and still create hard questions about where new infrastructure goes, how costs are allocated, and what the surrounding community receives.
+
+I do not think opposing a particular data center necessarily implies opposing AI. Residents can reasonably want to know about noise, water use, grid investment, and the durability of promised benefits. The answers will depend on the location and the design. Likewise, the existence of costs does not settle whether a project is worthwhile. It creates an obligation to make the tradeoffs explicit and to account for them honestly.
+
+There is a connection here to the wider backlash. The promised benefits of AI are often described at the scale of humanity. Its immediate costs arrive at the scale of a household, a profession, or a town. We should expect resistance when the people asked to accept those costs have little confidence that the larger promise includes them.
+
+## What is all of this worth?
+
+I have been interested in the business side of technology since before I worked on AI. The valuation question is a particularly strange one because people often seem to be answering different questions while using the same words.
+
+I would separate three claims:
+
+1. AI can create enormous value for people.
+2. Companies providing AI can capture a substantial amount of that value as durable profits.
+3. The prices investors pay for those companies are justified by the profits they will eventually earn.
+
+Evidence for the first claim helps with the second and third, but it does not settle them.
+
+Suppose a tool saves a customer a great deal of work. That creates room for a valuable business. The amount the provider can charge, however, also depends on competition, alternatives, switching costs, and the customer's ability to capture the savings. A user can benefit enormously from a service whose price keeps falling. That is excellent for the user and a more complicated story for someone who financed the service assuming high margins.
+
+There are reasons large businesses could emerge here. Useful capabilities can reach many different markets. Customers may pay substantially for reliable systems that understand their workflows, integrate with their tools, and earn their trust. Research and infrastructure can be expensive enough to create meaningful advantages for organizations that do them well.
+
+But some advantages may change. In 2019, part of my explanation for why open-source businesses worked was that understanding someone else's code was expensive. What happens to that advantage when understanding the code becomes much cheaper? Deployment, reliability, support, and customer trust still matter. The difficulty of reproducing a feature may matter less. A capability can make a product more useful while also making parts of its business easier to compete with.
+
+The same question applies to AI providers themselves. Better efficiency may lower the cost of serving users while competition passes much of the saving on to those users. A company can attract demand and still struggle to pay for the research, infrastructure, and ongoing computation needed to meet it.
+
+Timing complicates things further. Infrastructure requires commitments before the resulting demand and returns are fully known. The [IEA explicitly notes](https://www.iea.org/reports/key-questions-on-energy-and-ai/executive-summary) that financing conditions and expectations about returns will affect the pace of data-center expansion. A technology can ultimately justify a great deal of investment while some projects are built too early, at the wrong cost, or in the wrong place.
+
+So I do not have a blanket answer to whether AI valuations are justified. I am much more confident that the capabilities matter than that every current price embeds sensible assumptions. For a particular business, I would want to understand what customers pay for, the cost of delivering it, why the business can retain those customers, and what must happen for the investment to earn its return.
+
+It is entirely possible to underestimate AI's eventual importance and overpay for a particular AI company. It is also possible to dismiss an investment because you underestimate how large its market could become. Working out which case you are looking at requires an argument about the business.
+
+## What I am watching next
+
+After these six years, I am reluctant to offer a confident script for the next six. I do have some questions that seem increasingly important.
+
+For the past two years, I have been leading a team focused on reasoning, memory, and test-time training. That work puts some of these questions close to home. How much useful work can a system do before a person has to intervene? How reliably can it recognize a mistake, recover from it, or admit that it is stuck? As we give it more context, memory, and opportunities to learn from experience, can we still understand what it is doing and control what it is allowed to affect?
+
+I also want to know whether verification can keep up with generation. It is easy to imagine a world with far more proposed code changes, analyses, and scientific hypotheses. The benefit depends on our ability to tell which are good. AI can help with that work too, but the feedback has to remain connected to reality. Producing an answer and producing convincing-looking evidence for it are not enough.
+
+A particularly consequential possibility is that AI accelerates the research and engineering used to build better AI. To the extent that happens, we may have less time to adapt between advances. It could also give us better tools for evaluating systems, finding vulnerabilities, and improving defenses. I would like to see those capabilities develop together. There is no reason to assume that the balance will take care of itself.
+
+I will also be watching whether people outside the field get more control over their own work and lives as these tools improve. That is a large part of what makes the effort worthwhile to me. More capable systems should make it easier for more people to build, learn, and solve problems they care about. We should be willing to judge progress by whether that actually happens.
+
+My last post was about an interface that behaved differently from what I expected. The gap between what an interface seems to promise and what the system actually does has followed me into a very different kind of work. There are still experiments to run, bugs to fix, and difficult engineering choices. But the consequences now reach far beyond a surprising result in a short program.
+
+That is what the age of wonder and terror feels like to me. I am excited by how much more people may be able to understand and create. I am unsettled by the damage increasingly capable systems could do and by how much of the adjustment remains ahead of us. I expect to keep revising my view of both. Hopefully, I will write some of it down before another six years pass.
+
+## Trash
+These models have already accelerated the pace of AI research by automating much of the drudgery and minutiae of coding. And it seems inevitable that they will soon be able to do AI research autonomously, getting us to the edge of recursive self-improvement of AI. 
+
 
 [^upload]: Models have it so nice: if you don't like what happened to the loss function over the last few steps, just roll back to an old snapshot and redo them.  The closest analogue for humans is "upload," which, as of this writing, remains elusive.
+
+At various points, I even considered declaring health bankruptcy, quitting my job, and standing aside.
 
